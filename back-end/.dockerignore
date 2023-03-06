@@ -1,0 +1,7 @@
+README.md
+Dockerfile
+Dockerfile.migrator
+Cargo.lock
+.env
+.cargo
+target/*

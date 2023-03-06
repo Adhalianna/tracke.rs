@@ -1,0 +1,25 @@
+#
+# Runs diesel migrator in a docker and waits for postgres 
+# to become available under host and port provided in the
+# WAIT_HOSTS variable. The variable should be compatible
+# with the DATABASE_URL variable provided to the docker.
+#
+# Example values of the variables:
+# DATABASE_URL="postgres://database:5432"
+# WAIT_HOSTS=database:5432
+#
+# If the container is bound with the directory containing
+# the migrations, diesel.toml, and the sources it should
+# not only update the database but also the sources with
+# the inferred and generated schema.
+#
+
+FROM rust:slim as diesel_postgres_cli
+WORKDIR /app
+RUN apt-get update && apt-get install libpq-dev openssl ca-certificates -y && \
+    cargo install diesel_cli --no-default-features --features postgres
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
+RUN chmod +x /wait
+COPY . .
+CMD /wait && diesel migration run
+

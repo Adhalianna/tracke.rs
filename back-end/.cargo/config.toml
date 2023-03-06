@@ -1,0 +1,4 @@
+[alias]
+dev = "run --features local-dev"
+[registries.crates-io]
+protocol = "sparse"
