@@ -21,7 +21,7 @@ distribution.
 Besides docker we will be using an extension to it called _docker compose_. It's a tool which can
 parse a special configuration file usually called `docker-compose.yml` and run multiple containers
 using the file as a recipe for their parameters and origin. [To use _docker compose_ on Windows or
-Mac the desktop application is required](https://docs.docker.com/compose/install/) or the WSL.
+Mac a desktop application is required](https://docs.docker.com/compose/install/) or the WSL.
 
 Having all of that installed neither front-end or back-end teams should worry about getting any
 other teams tools of trade - all the build (compilation, launching, etc) processes can happen in
