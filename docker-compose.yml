@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  database:
+    hostname: "database"
+    restart: always
+    image: "postgres:latest"
+    expose:
+      - "5432"
+    ports:
+      - 5432:5432
+    volumes:
+      - ./db_data/:/var/lib/postgresql/data/
+    command: postgres -c shared_buffers=512MB -c wal_buffers=64MB -c work_mem=8MB
+    environment:
+      POSTGRES_USER: githab
+      POSTGRES_PASSWORD: githab
+      POSTGRES_DB: githab
+    networks:
+      - app-net
+  back-end:
+    hostname: "back-end"
+    build:
+      context: ./back-end
+      dockerfile: ./Dockerfile
+    env_file: ./.env.docker
+    ports:
+      - "4000:4000"
+    networks:
+      - app-net
+  migrator:
+    build:
+      context: ./back-end
+      dockerfile: ./Dockerfile.migrator
+    depends_on:
+      - database
+    env_file: ./.env.docker
+    hostname: "migrator"
+    volumes:
+      - ./back-end:/app
+    networks:
+      - app-net
+networks:
+  app-net:
+    driver: bridge

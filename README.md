@@ -31,4 +31,8 @@ docker containers.
 
 ### Docker Compose in Terminal
 
-_TODO, maybe not neccessary_
+To set the database up execute:
+
+```sh
+sudo docker compose up database
+```

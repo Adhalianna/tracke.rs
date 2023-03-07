@@ -1,1 +1,3 @@
 /back-end/target
+/back-end/Cargo.lock
+/db_data
