@@ -12,16 +12,26 @@
 //! occurs.
 
 pub use crate::{
-    db::{models, schema},
+    db::{
+        models::{self, duration::Duration},
+        schema,
+    },
     error::ServerError,
     services, AppState,
 };
-pub use axum::{extract::State, http::StatusCode, response::IntoResponse, routing, Json, Router};
-pub use diesel::{AsChangeset, Identifiable, Insertable, Queryable};
+pub use aide::{
+    axum::routing, axum::ApiRouter, axum::AxumOperationHandler, axum::IntoApiResponse,
+    axum::RouterExt, openapi, operation::OperationHandler as AideOperationHandler,
+    operation::OperationInput as AideOperationInput,
+    operation::OperationOutput as AideOperationOutput,
+};
+pub use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+pub use diesel::{AsChangeset, Identifiable, Insertable, QueryDsl, Queryable};
 pub use diesel_async::{RunQueryDsl, SaveChangesDsl};
+pub use schemars::JsonSchema;
 pub use serde::{Deserialize, Serialize};
 pub use std::{
     fmt::{Debug, Display},
     net::SocketAddr,
 };
-pub use utoipa::ToSchema;
+pub use uuid::Uuid;

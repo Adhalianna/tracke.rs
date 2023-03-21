@@ -5,8 +5,11 @@
 
 use crate::prelude::*;
 
+pub mod duration;
+pub mod task;
+pub use task::Task;
 /// A dummy table and model used for testing.
-#[derive(Queryable, Debug, Serialize, ToSchema)]
+#[derive(Queryable, Debug, Serialize, JsonSchema)]
 pub struct Hello {
     pub key: String,
     pub value: String,

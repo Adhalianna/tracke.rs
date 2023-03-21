@@ -1,5 +1,4 @@
 pub mod db;
-pub mod docs;
 pub mod error;
 pub mod prelude;
 pub mod services;

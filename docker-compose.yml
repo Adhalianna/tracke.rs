@@ -12,9 +12,9 @@ services:
       - ./db_data/:/var/lib/postgresql/data/
     command: postgres -c shared_buffers=512MB -c wal_buffers=64MB -c work_mem=8MB
     environment:
-      POSTGRES_USER: githab
-      POSTGRES_PASSWORD: githab
-      POSTGRES_DB: githab
+      POSTGRES_USER: trackers
+      POSTGRES_PASSWORD: trackers
+      POSTGRES_DB: trackers
     networks:
       - app-net
   back-end:
