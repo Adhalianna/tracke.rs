@@ -1,0 +1,4 @@
+FROM trackers-chef as trackers-planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json

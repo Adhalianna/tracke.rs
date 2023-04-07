@@ -1,0 +1,15 @@
+FROM trackers-chef as builder
+WORKDIR /app
+COPY --from=trackers-planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json -p trackers-api-server
+COPY . .
+RUN cargo build --release --bin trackers-api-server
+
+
+FROM debian:bullseye-slim AS runtime
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --no-install-recommends openssl ca-certificates libpq-dev -y \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/trackers-api-server trackers-api-server
+ENTRYPOINT ["/app/trackers-api-server"]

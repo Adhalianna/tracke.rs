@@ -1,0 +1,25 @@
+FROM trackers-chef as leptos_tools
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --no-install-recommends pkg-config openssl libssl-dev -y \
+    && cargo install cargo-leptos --no-track --locked \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM leptos_tools as builder
+WORKDIR /app
+COPY --from=trackers-planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --target wasm32-unknown-unknown --recipe-path recipe.json -p trackers-web-ui \
+    && cargo chef cook --release  --recipe-path recipe.json -p trackers-web-ui
+COPY . .
+RUN cargo leptos build --release
+    
+FROM debian:bullseye-slim AS runtime
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --no-install-recommends openssl ca-certificates libnss-docker  -y \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/server/release/trackers-web-ui trackers-web-ui
+COPY --from=builder /app/target/site site
+ENV LEPTOS_OUTPUT_NAME="trackers-web-ui" LEPTOS_SITE_ROOT="site" LEPTOS_SITE_PKG_DIR="pkg" LEPTOS_SITE_ADDR="0.0.0.0:3000" LEPTOS_RELOAD_PORT="3001"
+HEALTHCHECK --start-period=1s --interval=1m --timeout=3s CMD curl --fail -l -X GET 0.0.0.0:3000 || exit 1
+ENTRYPOINT ["/app/trackers-web-ui"]

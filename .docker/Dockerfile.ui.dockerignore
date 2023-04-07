@@ -1,0 +1,15 @@
+.git
+db_data
+target
+*/target
+.gitignore
+*/.gitignore
+LICENSE
+*/LICENSE
+*.md
+diesel.toml
+docker-compose.yml
+.docker
+.env
+
+trackers-models/migrations

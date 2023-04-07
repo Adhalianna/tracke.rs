@@ -1,6 +1,0 @@
-[alias]
-dev = "run --features local-dev"
-[build]
-rustflags = "--cfg uuid_unstable"
-[registries.crates-io]
-protocol = "sparse"

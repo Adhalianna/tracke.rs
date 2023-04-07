@@ -1,5 +1,6 @@
 version: "3.9"
 services:
+  # Database
   database:
     hostname: "database"
     restart: always
@@ -17,28 +18,74 @@ services:
       POSTGRES_DB: trackers
     networks:
       - app-net
-  back-end:
-    hostname: "back-end"
+      
+  # Common images used to build api and web-ui
+  trackers-chef:
+    image: trackers-chef:${TAG:-latest}
+    build: 
+      context: .
+      dockerfile: ./.docker/Dockerfile.chef
+    env_file: .env.docker    
+  trackers-planner:
+    image: trackers-planner
+    env_file: .env.docker    
+    build: 
+      context: .
+      dockerfile: ./.docker/Dockerfile.planner
+    depends_on:
+      trackers-chef:
+        condition: service_completed_successfully
+  
+  # Api server
+  api:
+    image: api:${TAG:-latest}
     build:
-      context: ./back-end
-      dockerfile: ./Dockerfile
-    env_file: ./.env.docker
+      context: .
+      dockerfile: ./.docker/Dockerfile.api
+    env_file: .env.docker
     ports:
+      - "4000:4000"
+    expose:
       - "4000:4000"
     networks:
       - app-net
+    depends_on:
+      trackers-chef:
+        condition: service_completed_successfully
+      trackers-planner:
+        condition: service_completed_successfully
+      
+  # Migrations tool
   migrator:
     build:
-      context: ./back-end
-      dockerfile: ./Dockerfile.migrator
-    depends_on:
-      - database
-    env_file: ./.env.docker
-    hostname: "migrator"
+      context: .
+      dockerfile: ./.docker/Dockerfile.models
+    env_file: .env.docker
     volumes:
-      - ./back-end:/app
+      - ./trackers-models:/app
     networks:
       - app-net
+    deploy:
+      mode: global
+      
+  # Front-end (Web UI)
+  web-ui:
+    image: web-ui:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ./.docker/Dockerfile.ui
+    ports:
+      - "3000:3000"
+      - "3001:3001"      
+    env_file: .env.docker
+    networks:
+      - app-net
+    depends_on:
+      trackers-chef:
+        condition: service_completed_successfully
+      trackers-planner:
+        condition: service_completed_successfully
+
 networks:
   app-net:
     driver: bridge

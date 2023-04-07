@@ -1,0 +1,22 @@
+[package]
+name = "trackers-models"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+wasm = ["uuid/js"]
+
+[dependencies]
+diesel = { workspace = true, default-features = false, features = [
+  "postgres_backend",
+  "without-deprecated",
+  "chrono",
+  "uuid",
+] }
+serde = { workspace = true, features = ["derive"] }
+uuid = {workspace = true, features = ["serde", "fast-rng", "std", "v7"]}
+humantime = {workspace = true}
+chrono = {workspace = true, default-features = false, features = ["std", "serde"]}
+schemars = {workspace = true, features = ["derive", "chrono", "uuid1"]}
