@@ -10,7 +10,7 @@ default = []
 local-dev = ["dotenvy"]
 
 [dependencies]
-trackers-models = { path="../trackers-models" }
+trackers-models = { path="../trackers-models", default-features=false, features=["diesel"] }
 axum = "^0.6"
 tokio = { version = "^1", features = ["full"] }
 serde = { workspace = true, features = ["derive"] }

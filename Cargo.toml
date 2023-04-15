@@ -1,5 +1,5 @@
 [workspace]
-members = ["trackers-api-server", "trackers-models", "trackers-web-ui"]
+members = ["trackers-api-server", "trackers-models"]
 default-members = ["trackers-api-server"]
 
 [workspace.dependencies]
@@ -15,4 +15,3 @@ humantime = {version = "^1.0"}
 chrono = {version = "^0.4", default-features = false, features = ["std", "serde"]}
 schemars = {version = "^0.8", features = ["derive", "chrono", "uuid1"]}
 dotenvy = { version = "^0.15"}
-

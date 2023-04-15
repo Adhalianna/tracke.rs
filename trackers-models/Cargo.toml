@@ -7,9 +7,10 @@ edition = "2021"
 
 [features]
 wasm = ["uuid/js"]
+diesel = ["dep:diesel"]
 
 [dependencies]
-diesel = { workspace = true, default-features = false, features = [
+diesel = { workspace = true, default-features = false, optional = true, features = [
   "postgres_backend",
   "without-deprecated",
   "chrono",

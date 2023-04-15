@@ -13,8 +13,4 @@ docker-compose.yml
 .env
 .env*
 
-
-trackers-web-ui/assets
-trackers-web-ui/end2end
-trackers-web-ui/style
 trackers-models/migrations

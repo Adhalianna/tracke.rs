@@ -14,7 +14,7 @@
 # the inferred and generated schema.
 #
 
-FROM rustlang/rust:nightly-slim as diesel_postgres_cli
+FROM rust:slim as diesel_postgres_cli
 WORKDIR /app
 RUN apt-get update \
     && apt-get install --no-install-recommends libpq-dev openssl ca-certificates -y \

@@ -1,5 +1,6 @@
 version: "3.9"
 services:
+  
   # Database
   database:
     hostname: "database"
@@ -67,24 +68,6 @@ services:
       - app-net
     deploy:
       mode: global
-      
-  # Front-end (Web UI)
-  web-ui:
-    image: web-ui:${TAG:-latest}
-    build:
-      context: .
-      dockerfile: ./.docker/Dockerfile.ui
-    ports:
-      - "3000:3000"
-      - "3001:3001"      
-    env_file: .env.docker
-    networks:
-      - app-net
-    depends_on:
-      trackers-chef:
-        condition: service_completed_successfully
-      trackers-planner:
-        condition: service_completed_successfully
 
 networks:
   app-net:

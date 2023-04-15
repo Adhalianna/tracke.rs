@@ -1,17 +1,10 @@
 /// Stored in the database as a number of seconds
-#[derive(
-    Clone,
-    Debug,
-    Copy,
-    Hash,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    diesel::deserialize::FromSqlRow,
-    diesel::expression::AsExpression,
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "diesel",
+    derive(diesel::deserialize::FromSqlRow, diesel::expression::AsExpression)
 )]
-#[diesel(sql_type=diesel::sql_types::BigInt)]
+#[cfg_attr(feature="diesel",diesel(sql_type=diesel::sql_types::BigInt))]
 pub struct Duration(pub chrono::Duration);
 
 impl AsRef<chrono::Duration> for Duration {
@@ -20,6 +13,7 @@ impl AsRef<chrono::Duration> for Duration {
     }
 }
 
+#[cfg(feature = "diesel")]
 impl diesel::serialize::ToSql<diesel::sql_types::BigInt, diesel::pg::Pg> for Duration {
     fn to_sql<'b>(
         &'b self,
@@ -31,6 +25,7 @@ impl diesel::serialize::ToSql<diesel::sql_types::BigInt, diesel::pg::Pg> for Dur
     }
 }
 
+#[cfg(feature = "diesel")]
 impl diesel::deserialize::FromSql<diesel::sql_types::BigInt, diesel::pg::Pg> for Duration {
     fn from_sql(
         bytes: diesel::backend::RawValue<'_, diesel::pg::Pg>,
@@ -115,3 +110,11 @@ impl<'de> serde::Deserialize<'de> for Duration {
         Ok(Self(deserializer.deserialize_string(DurationVisitor)?))
     }
 }
+
+#[cfg(feature = "leptos")]
+impl leptos::IntoView for Duration {
+    fn into_view(self, cx: leptos::Scope) -> leptos::View {
+        self.0.to_string().into_view(cx)
+    }
+}
+

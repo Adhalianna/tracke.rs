@@ -20,5 +20,5 @@ CREATE TABLE tasks(
   time_estimate bigint null, -- storing the number of seconds
   soft_deadline timestamp null,
   hard_deadline timestamp null,
-  tags text[]
+  tags text[] null
 );
