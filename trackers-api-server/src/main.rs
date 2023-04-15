@@ -2,8 +2,9 @@ pub mod error;
 pub mod prelude;
 pub mod services;
 
+use std::net::ToSocketAddrs;
+
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
-use std::net::SocketAddr;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -41,9 +42,22 @@ pub async fn main() {
 
     let app = services::app_services().with_state(state);
 
-    let server_address = SocketAddr::from(([0, 0, 0, 0], 4000));
+    let server_address = {
+        #[cfg(feature = "local-dev")]
+        let mut address = dotenvy::var("API_SERVER_ADDRESS")
+                .expect("API_SERVER_ADDRESS environment variable must be set")
+                .to_socket_addrs().expect("failed to parse or look up the value of API_SERVER_ADDRESS as a valid valid socket address");
+        #[cfg(not(feature = "local-dev"))]
+        let mut address = std::env::var("API_SERVER_ADDRESS")
+                .expect("API_SERVER_ADDRESS environment variable must be set")
+                .to_socket_addrs().expect("failed to parse or look up the value of API_SERVER_ADDRESS as a valid socket address");
 
-    println!("launching the server at: {server_address} ...");
+        address.next().expect(
+            "failed to find any matching socket addresses for the value of API_SERVER_ADDRESS",
+        )
+    };
+
+    println!("launching the server at: {server_address}");
 
     axum::Server::bind(&server_address)
         .serve(app.into_make_service())
@@ -77,5 +91,5 @@ pub async fn shutdown_handler() {
         },
     }
 
-    println!("  Signal received, starting graceful shutdown.");
+    println!("  signal received, starting graceful shutdown");
 }
