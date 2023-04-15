@@ -2,14 +2,14 @@
 
 ## Project Description
 
-_tracke.rs_ - a hackable task management tool that aims to be reusable for
-personal use in various contexts so that you never have to look for another
-to-do app again.
+_tracke.rs_ - a hackable task management tool (an API) that aims to be reusable
+for personal use in various contexts so that you never have to look for another
+to-dos tracking tool again.
 
 ### Design goals
 
-- __Hackable__ - the task manager is designed with an access through an API in
-mind.
+- __Hackable__ - the task manager is accessible through an open and documented
+API.
 - __Personal__ - while sharing and collaboration are possible the presentation
 is focused on personal task management.
 - __Flexible and task-centric__ - any productivity increasing technique should
