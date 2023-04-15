@@ -1,5 +1,5 @@
 [alias]
-api_dev = "watch -w trackers-api-server -w trackers-models -x run --features local-dev"
+dev = "watch -w trackers-api-server -w trackers-models -x run --features local-dev"
 
 [build]
 rustflags = "--cfg uuid_unstable"

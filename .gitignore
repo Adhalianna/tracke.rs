@@ -1,8 +1,4 @@
-/trackers-api-server/Cargo.lock
 /trackers-api-server/target
-/trackers-models/Cargo.lock
 /trackers-models/target
-/trackers-web-ui/Cargo.lock
-/trackers-web-ui/target
 /target
 /db_data
