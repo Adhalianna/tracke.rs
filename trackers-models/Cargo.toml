@@ -17,6 +17,7 @@ diesel = { workspace = true, default-features = false, optional = true, features
   "uuid",
 ] }
 serde = { workspace = true, features = ["derive"] }
+serde_json = {version = "^1.0"}
 uuid = {workspace = true, features = ["serde", "fast-rng", "std", "v7"]}
 humantime = {workspace = true}
 chrono = {workspace = true, default-features = false, features = ["std", "serde"]}

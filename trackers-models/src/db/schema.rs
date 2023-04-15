@@ -1,18 +1,10 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    groups (group_id) {
-        group_id -> Uuid,
-        user_id -> Uuid,
-        name -> Varchar,
-    }
-}
-
-diesel::table! {
     tasks (task_id) {
         task_id -> Uuid,
-        user_id -> Nullable<Uuid>,
-        group_id -> Nullable<Uuid>,
+        tracker_id -> Uuid,
+        completed_at -> Nullable<Timestamp>,
         title -> Varchar,
         description -> Nullable<Text>,
         time_estimate -> Nullable<Int8>,
@@ -23,19 +15,27 @@ diesel::table! {
 }
 
 diesel::table! {
-    users (user_id) {
+    trackers (tracker_id) {
+        tracker_id -> Uuid,
         user_id -> Uuid,
-        email -> Bpchar,
-        password -> Varchar,
+        name -> Varchar,
+        is_default -> Bool,
     }
 }
 
-diesel::joinable!(groups -> users (user_id));
-diesel::joinable!(tasks -> groups (group_id));
-diesel::joinable!(tasks -> users (user_id));
+diesel::table! {
+    users (user_id) {
+        user_id -> Uuid,
+        email -> Bpchar,
+        password -> Bytea,
+    }
+}
+
+diesel::joinable!(tasks -> trackers (tracker_id));
+diesel::joinable!(trackers -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    groups,
     tasks,
+    trackers,
     users,
 );

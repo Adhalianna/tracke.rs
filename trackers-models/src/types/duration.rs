@@ -1,3 +1,5 @@
+use schemars::schema::InstanceType;
+
 /// Stored in the database as a number of seconds
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
@@ -46,7 +48,7 @@ impl schemars::JsonSchema for Duration {
     fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
         schemars::schema::Schema::Object(schemars::schema::SchemaObject {
                 metadata: Some(Box::new(schemars::schema::Metadata {
-                    title: Some(String::from("Human readable duration")),
+                    title: Some(String::from("Duration")),
                     description: Some(String::from("The duration string is a concatenation of time spans. Where each time span is an integer number and a suffix. Supported suffixes:\n
 * __seconds__, __second__, __sec__, __s__\n
 * __minutes__, __minute__, __min__, __m__\n
@@ -56,10 +58,14 @@ impl schemars::JsonSchema for Duration {
 * __months__, __month__, __M__ – defined as 30.44 days\n
 * __years__, __year__, __y__ – defined as 365.25 days\n")),
                     default: None,  //TODO
-                    examples: Vec::new(), //TODO
+                    examples: vec![
+                        serde_json::Value::String("5m 30s".to_string()), 
+                        serde_json::Value::String("1w 2d".to_string()), 
+                        serde_json::Value::String("120m 30s".to_string())
+                    ],
                     ..schemars::schema::Metadata::default()
-                })), //TODO
-                instance_type: None, //TODO
+                })),
+                instance_type: Some(schemars::schema::SingleOrVec::Single(Box::new(InstanceType::String))),
                 format: None,        //TODO
                 string: None,        //TODO
                 ..schemars::schema::SchemaObject::default()
@@ -110,11 +116,3 @@ impl<'de> serde::Deserialize<'de> for Duration {
         Ok(Self(deserializer.deserialize_string(DurationVisitor)?))
     }
 }
-
-#[cfg(feature = "leptos")]
-impl leptos::IntoView for Duration {
-    fn into_view(self, cx: leptos::Scope) -> leptos::View {
-        self.0.to_string().into_view(cx)
-    }
-}
-

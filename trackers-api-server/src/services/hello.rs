@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use models::{Task, TaskInput};
+use models::{db, Task, TaskInput};
 
 pub fn hello() -> ApiRouter<AppState> {
     ApiRouter::new().api_route("/hello", routing::get(get_hello).post(post_hello_task))
@@ -9,9 +9,11 @@ pub async fn get_hello(State(state): State<AppState>) -> Result<Json<Vec<Task>>,
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::*;
 
-    let all_tasks: Vec<Task> = tasks.load(&mut db_conn).await?;
+    let all_tasks: Vec<db::Task> = tasks.load(&mut db_conn).await?;
 
-    Ok(Json(all_tasks))
+    Ok(Json(
+        all_tasks.into_iter().map(|t: db::Task| t.into()).collect(),
+    ))
 }
 
 pub async fn post_hello_task(
@@ -25,12 +27,18 @@ pub async fn post_hello_task(
     let new_task_id = task.task_id.unwrap_or(uuid::Uuid::now_v7());
 
     diesel::insert_into(tasks)
-        .values(Task {
+        .values(db::Task {
             task_id: new_task_id.clone(),
-            user_id: None,
-            group_id: task.group_id,
+            tracker_id: task.tracker_id,
             title: task.title,
             description: task.description,
+            completed_at: {
+                if task.completed {
+                    Some(chrono::Local::now().naive_local())
+                } else {
+                    None
+                }
+            },
             time_estimate: task.time_estimate,
             soft_deadline: task.soft_deadline,
             hard_deadline: task.hard_deadline,
@@ -39,7 +47,7 @@ pub async fn post_hello_task(
         .execute(&mut db_conn)
         .await?;
 
-    let inserted: Task = tasks.find(new_task_id).first(&mut db_conn).await?;
+    let inserted: db::Task = tasks.find(new_task_id).first(&mut db_conn).await?;
 
-    Ok(Json(inserted))
+    Ok(Json(inserted.into()))
 }

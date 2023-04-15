@@ -1431,6 +1431,7 @@ dependencies = [
  "humantime",
  "schemars",
  "serde",
+ "serde_json",
  "uuid",
 ]
 
