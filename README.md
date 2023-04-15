@@ -1,8 +1,8 @@
-# tracke.rs
+# [tracke.rs](https://github.com/Adhalianna/tracke.rs)
 
 ## Project Description
 
-_tracke.rs_ - a hackable task management tool (an API) that aims to be reusable
+___tracke.rs___ - a hackable task management tool (an API) that aims to be reusable
 for personal use in various contexts so that you never have to look for another
 to-dos tracking tool again.
 
@@ -23,8 +23,9 @@ be possible to reproduce with flexible tasks as the primary unit of knowledge.
 Because of limited time only a part of the design goals will be realized by the
 deadline of WAT 2023 project. It is a conceptually simple application that could
 see growth in many directions. The listed design goals are meant to set a 
-direction for further development and instead the user stories that have a tag 
-`WAT2023` will be targeted for the duration of the project.
+direction for further development and instead the user stories that belong to the
+[GitHub project](https://github.com/users/Adhalianna/projects/1) which is used for
+tracking the WAT2023 project will be targeted.
 
 ### Technology stack
 - Rust - language used on both front and back end for its stability and
