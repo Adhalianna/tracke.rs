@@ -15,22 +15,16 @@ is focused on personal task management.
 - __Flexible and task-centric__ - any productivity increasing technique should
 be possible to reproduce with flexible tasks as the primary unit of knowledge.
 
-Non-goals:
-- The web front-end does not strive to be visually appealing.
-
 ### CS Web Application Technologies project goals
 
 It is quite possible that because of limited time only a part of the design
-goals will be realized by the deadline. The ideas behind the project are quite
-appealing to the author and they keep evolving. It is a conceptually simple
+goals will be realized by the deadline. It is a conceptually simple
 application that could see growth in many directions.
-
 
 ### Technology stack
 - Rust - language used on both front and back end for its stability and
 ergonomic libraries
 - axum - web server framework
-- leptos - front-end framework
 - aliri - auth library
 - PostgreSQL - database
 - Diesel (async) - ORM
