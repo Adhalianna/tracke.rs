@@ -1,22 +1,26 @@
 use crate::prelude::*;
-use models::{db, Task, TaskInput};
+use models::{
+    db::{self},
+    Task, TaskInput,
+};
 
-pub fn hello() -> ApiRouter<AppState> {
-    ApiRouter::new().api_route("/hello", routing::get(get_hello).post(post_hello_task))
+pub fn router() -> ApiRouter<AppState> {
+    ApiRouter::new().api_route("/task/:task_id", routing::get(get_one))
 }
 
-pub async fn get_hello(State(state): State<AppState>) -> Result<Json<Vec<Task>>, ServerError> {
+pub async fn get_one(
+    State(state): State<AppState>,
+    axum::extract::Path(task_id): axum::extract::Path<models::types::Uuid>,
+) -> Result<Json<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
-    use db_schema::tasks::dsl::*;
+    use db_schema::tasks::dsl::tasks;
 
-    let all_tasks: Vec<db::Task> = tasks.load(&mut db_conn).await?;
+    let the_task: db::Task = tasks.find(task_id).get_result(&mut db_conn).await?;
 
-    Ok(Json(
-        all_tasks.into_iter().map(|t: db::Task| t.into()).collect(),
-    ))
+    Ok(Json(the_task.into()))
 }
 
-pub async fn post_hello_task(
+pub async fn post(
     State(state): State<AppState>,
     Json(task): Json<TaskInput>,
 ) -> Result<Json<Task>, ServerError> {
@@ -24,7 +28,7 @@ pub async fn post_hello_task(
 
     use db_schema::tasks::dsl::*;
 
-    let new_task_id = task.task_id.unwrap_or(uuid::Uuid::now_v7());
+    let new_task_id = task.task_id.unwrap_or(uuid::Uuid::now_v7().into());
 
     diesel::insert_into(tasks)
         .values(db::Task {

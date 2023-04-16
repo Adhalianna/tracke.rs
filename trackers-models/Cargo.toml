@@ -22,3 +22,4 @@ uuid = {workspace = true, features = ["serde", "fast-rng", "std", "v7"]}
 humantime = {workspace = true}
 chrono = {workspace = true, default-features = false, features = ["std", "serde"]}
 schemars = {workspace = true, features = ["derive", "chrono", "uuid1"]}
+base62 = {version = "^2.0"}

@@ -14,3 +14,5 @@ pub mod deadline_time;
 pub use deadline_time::DeadlineTime;
 pub mod string;
 pub use string::String;
+pub mod uuid;
+pub use crate::types::uuid::Uuid;

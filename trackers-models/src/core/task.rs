@@ -2,9 +2,9 @@
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Clone)]
 pub struct Task {
     /// Universally unique task identifier
-    pub task_id: uuid::Uuid,
+    pub task_id: crate::types::Uuid,
     /// The ID of a tracker to which the task belongs
-    pub tracker_id: uuid::Uuid,
+    pub tracker_id: crate::types::Uuid,
     pub completed: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub completed_at: Option<chrono::NaiveDateTime>,
@@ -52,8 +52,8 @@ impl From<crate::db::Task> for Task {
 /// Input values for the [Task] model.
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Clone)]
 pub struct TaskInput {
-    pub task_id: Option<uuid::Uuid>,
-    pub tracker_id: uuid::Uuid,
+    pub task_id: Option<crate::types::Uuid>,
+    pub tracker_id: crate::types::Uuid,
     pub title: crate::types::String<256>,
     #[serde(default)]
     pub completed: bool,

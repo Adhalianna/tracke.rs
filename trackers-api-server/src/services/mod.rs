@@ -1,12 +1,12 @@
 use crate::prelude::*;
 
-pub mod hello;
+pub mod task;
 
 /// Nests all the api endpoints under __`/api`__ prefix and deals with the extraction
 /// of OpenAPI specification along with serving the documentation based on the OAS.
 pub fn app_services() -> axum::Router<crate::AppState> {
     // collect services
-    let api_router = ApiRouter::new().nest("/api", ApiRouter::new().merge(hello::hello()));
+    let api_router = ApiRouter::new().nest("/api", ApiRouter::new().merge(task::router()));
 
     // prep the OAS
     let mut openapi_doc = openapi::OpenApi {
