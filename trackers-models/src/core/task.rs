@@ -10,10 +10,10 @@ pub struct Task {
     pub completed_at: Option<chrono::NaiveDateTime>,
     /// The title of a task. As it is the only required descriptive field it can
     /// also be used as the sole description of the task.
-    pub title: String,
+    pub title: crate::types::String<256>,
     /// Optional longer description of the task.
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub description: Option<String>,
+    pub description: Option<crate::types::String<4096>>,
     /// The estimated amount of time it will take to complete the task.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub time_estimate: Option<crate::types::Duration>,
@@ -54,12 +54,13 @@ impl From<crate::db::Task> for Task {
 pub struct TaskInput {
     pub task_id: Option<uuid::Uuid>,
     pub tracker_id: uuid::Uuid,
-    pub title: String,
+    pub title: crate::types::String<256>,
     #[serde(default)]
     pub completed: bool,
     #[serde(default)]
     pub completed_at: Option<chrono::NaiveDate>,
-    pub description: Option<String>,
+    #[serde(default)]
+    pub description: Option<crate::types::String<4096>>,
     #[serde(default)]
     pub time_estimate: Option<crate::types::Duration>,
     #[serde(default)]

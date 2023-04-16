@@ -11,9 +11,9 @@ pub struct Task {
     pub completed_at: Option<chrono::NaiveDateTime>,
     /// The title of a task. As it is the only required descriptive field it can also be
     /// used as the sole description of the task.
-    pub title: String,
+    pub title: crate::types::String<256>,
     /// Optional longer description of the task.
-    pub description: Option<String>,
+    pub description: Option<crate::types::String<4096>>,
     pub time_estimate: Option<crate::types::Duration>,
     pub soft_deadline: Option<chrono::NaiveDateTime>,
     pub hard_deadline: Option<chrono::NaiveDateTime>,

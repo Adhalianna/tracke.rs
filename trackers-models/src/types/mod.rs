@@ -12,3 +12,5 @@ pub mod tags;
 pub use tags::Tags;
 pub mod deadline_time;
 pub use deadline_time::DeadlineTime;
+pub mod string;
+pub use string::String;

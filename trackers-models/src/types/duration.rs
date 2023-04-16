@@ -48,7 +48,7 @@ impl schemars::JsonSchema for Duration {
     fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
         schemars::schema::Schema::Object(schemars::schema::SchemaObject {
                 metadata: Some(Box::new(schemars::schema::Metadata {
-                    title: Some(String::from("Duration")),
+                    title: Some(String::from("duration")),
                     description: Some(String::from("The duration string is a concatenation of time spans. Where each time span is an integer number and a suffix. Supported suffixes:\n
 * __seconds__, __second__, __sec__, __s__\n
 * __minutes__, __minute__, __min__, __m__\n
