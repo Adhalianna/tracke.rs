@@ -1,19 +1,35 @@
 use crate::prelude::*;
 
 pub mod task;
+pub mod tracker;
+pub mod user;
 
-/// Nests all the api endpoints under __`/api`__ prefix and deals with the extraction
-/// of OpenAPI specification along with serving the documentation based on the OAS.
+/// Mounts all the endpoints and deals with the extraction of OpenAPI
+/// specification along with serving the documentation based on the OAS.
 pub fn app_services() -> axum::Router<crate::AppState> {
     // collect services
-    let api_router = ApiRouter::new().nest("/api", ApiRouter::new().merge(task::router()));
+    let api_router = ApiRouter::new().nest(
+        "/api",
+        ApiRouter::new()
+            .merge(task::router())
+            .merge(tracker::router())
+            .merge(user::router()),
+    );
 
     // prep the OAS
     let mut openapi_doc = openapi::OpenApi {
         info: openapi::Info {
             title: "tracke.rs".to_owned(),
-            summary: Some("A hackable task management web application".to_owned()),
+            summary: Some(
+                "A hackable task management web application implemented as a RESTful API service"
+                    .to_owned(),
+            ),
             description: None,
+            contact: Some(openapi::Contact {
+                name: Some(String::from("Natalia Goc")),
+                url: Some(String::from("https://github.com/Adhalianna/tracke.rs")),
+                ..openapi::Contact::default()
+            }),
             ..openapi::Info::default()
         },
         ..openapi::OpenApi::default()
@@ -23,14 +39,12 @@ pub fn app_services() -> axum::Router<crate::AppState> {
     // serve the docs and the OAS
     api_router
         .route(
-            "/api/openapi.json",
+            "/openapi.json",
             axum::routing::get(serve_oas).layer(axum::Extension(openapi_doc)),
         )
         .route(
-            "/api/doc",
-            aide::redoc::Redoc::new("/api/openapi.json")
-                .axum_route()
-                .into(),
+            "/doc",
+            aide::redoc::Redoc::new("/openapi.json").axum_route().into(),
         )
 }
 

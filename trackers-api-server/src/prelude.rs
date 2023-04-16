@@ -19,7 +19,7 @@ pub use aide::{
     operation::OperationOutput as AideOperationOutput,
 };
 pub use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-pub use diesel::{AsChangeset, Identifiable, Insertable, QueryDsl, Queryable};
+pub use diesel::{AsChangeset, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable};
 pub use diesel_async::{RunQueryDsl, SaveChangesDsl};
 pub use schemars::JsonSchema;
 pub use serde::{Deserialize, Serialize};
@@ -29,4 +29,5 @@ pub use std::{
 };
 pub use trackers_models as models;
 pub use trackers_models::db::schema as db_schema;
-pub use uuid::Uuid;
+pub use trackers_models::types::Email as EmailAddress;
+pub use trackers_models::types::Uuid as Base62Uuid;

@@ -23,3 +23,4 @@ humantime = {workspace = true}
 chrono = {workspace = true, default-features = false, features = ["std", "serde"]}
 schemars = {workspace = true, features = ["derive", "chrono", "uuid1"]}
 base62 = {version = "^2.0"}
+fast_chemail = {version = "^0.9"}

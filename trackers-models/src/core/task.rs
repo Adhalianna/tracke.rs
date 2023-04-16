@@ -5,9 +5,9 @@ pub struct Task {
     pub task_id: crate::types::Uuid,
     /// The ID of a tracker to which the task belongs
     pub tracker_id: crate::types::Uuid,
-    pub completed: bool,
+    pub checkmarked: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub completed_at: Option<chrono::NaiveDateTime>,
+    pub checkmarked_at: Option<chrono::NaiveDateTime>,
     /// The title of a task. As it is the only required descriptive field it can
     /// also be used as the sole description of the task.
     pub title: crate::types::String<256>,
@@ -37,8 +37,8 @@ impl From<crate::db::Task> for Task {
         Self {
             task_id: t.task_id,
             tracker_id: t.tracker_id,
-            completed: t.completed_at.is_some(),
-            completed_at: t.completed_at,
+            checkmarked: t.completed_at.is_some(),
+            checkmarked_at: t.completed_at,
             title: t.title,
             description: t.description,
             time_estimate: t.time_estimate,
@@ -56,7 +56,7 @@ pub struct TaskInput {
     pub tracker_id: crate::types::Uuid,
     pub title: crate::types::String<256>,
     #[serde(default)]
-    pub completed: bool,
+    pub checkmarked: bool,
     #[serde(default)]
     pub completed_at: Option<chrono::NaiveDate>,
     #[serde(default)]

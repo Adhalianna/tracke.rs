@@ -3,7 +3,7 @@
 )]
 #[diesel(table_name = crate::db::schema::users)]
 pub struct User {
-    pub user_id: uuid::Uuid,
-    pub email: String,
+    pub user_id: crate::types::Uuid,
+    pub email: crate::types::Email,
     pub password: Vec<u8>,
 }

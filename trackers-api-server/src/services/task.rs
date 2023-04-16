@@ -1,16 +1,24 @@
 use crate::prelude::*;
 use models::{
     db::{self},
-    Task, TaskInput,
+    Task,
 };
 
 pub fn router() -> ApiRouter<AppState> {
-    ApiRouter::new().api_route("/task/:task_id", routing::get(get_one))
+    ApiRouter::new()
+        .api_route("/task/:task_id", routing::get(get_one_task))
+        .api_route(
+            "/task/:task_id/checkmark",
+            routing::post(make_completed)
+                .put(make_completed)
+                .delete(make_uncompleted),
+        )
 }
 
-pub async fn get_one(
+// TODO: protect from unauthorized use (check if user, from session, owns the task)
+async fn get_one_task(
     State(state): State<AppState>,
-    axum::extract::Path(task_id): axum::extract::Path<models::types::Uuid>,
+    axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
 ) -> Result<Json<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
@@ -20,38 +28,46 @@ pub async fn get_one(
     Ok(Json(the_task.into()))
 }
 
-pub async fn post(
+async fn make_completed(
     State(state): State<AppState>,
-    Json(task): Json<TaskInput>,
-) -> Result<Json<Task>, ServerError> {
+    axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
+) -> Result<([(axum::http::HeaderName, String); 1], Json<Task>), ServerError> {
     let mut db_conn = state.db.get().await?;
+    use db_schema::tasks::dsl::tasks;
 
-    use db_schema::tasks::dsl::*;
-
-    let new_task_id = task.task_id.unwrap_or(uuid::Uuid::now_v7().into());
-
-    diesel::insert_into(tasks)
-        .values(db::Task {
-            task_id: new_task_id.clone(),
-            tracker_id: task.tracker_id,
-            title: task.title,
-            description: task.description,
-            completed_at: {
-                if task.completed {
-                    Some(chrono::Local::now().naive_local())
-                } else {
-                    None
-                }
-            },
-            time_estimate: task.time_estimate,
-            soft_deadline: task.soft_deadline,
-            hard_deadline: task.hard_deadline,
-            tags: task.tags,
-        })
-        .execute(&mut db_conn)
+    let updated_task: db::Task = diesel::update(tasks)
+        .filter(db_schema::tasks::columns::task_id.eq(task_id))
+        .set(db_schema::tasks::columns::completed_at.eq(diesel::dsl::now))
+        .get_result(&mut db_conn)
         .await?;
 
-    let inserted: db::Task = tasks.find(new_task_id).first(&mut db_conn).await?;
+    Ok((
+        [(
+            axum::http::header::LOCATION,
+            format!("/api/task/{}", &updated_task.task_id),
+        )],
+        Json(updated_task.into()),
+    ))
+}
 
-    Ok(Json(inserted.into()))
+async fn make_uncompleted(
+    State(state): State<AppState>,
+    axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
+) -> Result<([(axum::http::HeaderName, String); 1], Json<Task>), ServerError> {
+    let mut db_conn = state.db.get().await?;
+    use db_schema::tasks::dsl::tasks;
+
+    let updated_task: db::Task = diesel::update(tasks)
+        .filter(db_schema::tasks::columns::task_id.eq(task_id))
+        .set(db_schema::tasks::columns::completed_at.eq(Option::<chrono::NaiveDateTime>::None))
+        .get_result(&mut db_conn)
+        .await?;
+
+    Ok((
+        [(
+            axum::http::header::LOCATION,
+            format!("/api/task/{}", &updated_task.task_id),
+        )],
+        Json(updated_task.into()),
+    ))
 }

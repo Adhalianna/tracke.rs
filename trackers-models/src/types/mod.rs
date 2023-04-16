@@ -16,3 +16,5 @@ pub mod string;
 pub use string::String;
 pub mod uuid;
 pub use crate::types::uuid::Uuid;
+pub mod email;
+pub use email::Email;
