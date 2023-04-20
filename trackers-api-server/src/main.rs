@@ -1,5 +1,6 @@
 pub mod error;
 pub mod prelude;
+pub mod response;
 pub mod services;
 
 use std::net::ToSocketAddrs;

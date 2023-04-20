@@ -18,20 +18,24 @@ pub fn router() -> ApiRouter<AppState> {
 async fn get_one_tracker(
     State(state): State<AppState>,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Json<Tracker>, ServerError> {
+) -> Result<Resource<Tracker>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
 
-    let the_tracker: Tracker = trackers.find(tracker_id).get_result(&mut db_conn).await?;
+    let the_tracker: Tracker = trackers
+        .find(tracker_id.clone())
+        .get_result(&mut db_conn)
+        .await?;
 
-    Ok(Json(the_tracker))
+    Ok(Resource::new(the_tracker)
+        .with_links([("tasks", format!("/api/tracker/{tracker_id}/tasks"))]))
 }
 
 async fn replace_tracker(
     State(state): State<AppState>,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
     Json(input): Json<Tracker>,
-) -> Result<Json<Tracker>, ServerError> {
+) -> Result<ModifiedResource<Tracker>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
 
@@ -44,13 +48,17 @@ async fn replace_tracker(
         .get_result(&mut db_conn)
         .await?;
 
-    Ok(Json(tracker))
+    Ok(ModifiedResource {
+        location: None,
+        resource: Resource::new(tracker)
+            .with_links([("tasks", format!("/api/tracker/{tracker_id}/tasks"))]),
+    })
 }
 
 async fn delete_tracker(
     State(state): State<AppState>,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<(), ServerError> {
+) -> Result<DeletedResource, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::{columns, dsl::trackers};
 
@@ -66,13 +74,15 @@ async fn delete_tracker(
         // TODO: Error, not found
     }
 
-    Ok(())
+    Ok(DeletedResource {
+        ..Default::default()
+    })
 }
 
 async fn get_trackers_tasks(
     State(state): State<AppState>,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Json<Vec<Task>>, ServerError> {
+) -> Result<Resource<Vec<Task>>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::columns::tracker_id;
     use db_schema::tasks::dsl::tasks;
@@ -82,7 +92,7 @@ async fn get_trackers_tasks(
         .load(&mut db_conn)
         .await?;
 
-    Ok(Json({
+    Ok(Resource::new({
         trackers_tasks.into_iter().map(|t| t.into()).collect()
     }))
 }
@@ -91,7 +101,7 @@ async fn post_to_tracker_a_task(
     State(state): State<AppState>,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
     Json(input): Json<TaskInput>,
-) -> Result<([(axum::http::HeaderName, String); 1], Json<Task>), ServerError> {
+) -> Result<CreatedResource<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
 
     use db_schema::tasks::dsl::*;
@@ -123,13 +133,13 @@ async fn post_to_tracker_a_task(
         .execute(&mut db_conn)
         .await?;
 
-    let inserted: db::Task = tasks.find(new_task_id).first(&mut db_conn).await?;
+    let inserted: db::Task = tasks.find(new_task_id.clone()).first(&mut db_conn).await?;
 
-    Ok((
-        [(
-            axum::http::header::LOCATION,
-            format!("/api/task/{}", &inserted.task_id),
-        )],
-        Json(inserted.into()),
-    ))
+    Ok(CreatedResource {
+        location: format!("/api/task/{new_task_id}"),
+        resource: Resource::new(inserted.into()).with_links([
+            ("mark", format!("/api/task/{new_task_id}/checkmark")),
+            ("self", format!("/api/task/{new_task_id}")),
+        ]),
+    })
 }

@@ -25,7 +25,7 @@ impl IntoResponse for ServerError {
 /// Defines the schema used in the OpenAPI specification for the error.
 impl JsonSchema for ServerError {
     fn schema_name() -> String {
-        "serverError".to_owned()
+        "server error".to_owned()
     }
 
     fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {

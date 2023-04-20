@@ -5,6 +5,7 @@ pub struct Task {
     pub task_id: crate::types::Uuid,
     /// The ID of a tracker to which the task belongs
     pub tracker_id: crate::types::Uuid,
+    #[serde(default)]
     pub checkmarked: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub checkmarked_at: Option<chrono::NaiveDateTime>,

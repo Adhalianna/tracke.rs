@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, response::ModifiedResource};
 use models::{
     db::{self},
     Task,
@@ -19,55 +19,56 @@ pub fn router() -> ApiRouter<AppState> {
 async fn get_one_task(
     State(state): State<AppState>,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Json<Task>, ServerError> {
+) -> Result<Resource<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
-    let the_task: db::Task = tasks.find(task_id).get_result(&mut db_conn).await?;
+    let the_task: db::Task = tasks.find(task_id.clone()).get_result(&mut db_conn).await?;
 
-    Ok(Json(the_task.into()))
+    Ok(Resource::new(the_task.into())
+        .with_links([("checkmark", format!("/api/task/{}/checkmark", task_id))]))
 }
 
 async fn make_completed(
     State(state): State<AppState>,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<([(axum::http::HeaderName, String); 1], Json<Task>), ServerError> {
+) -> Result<ModifiedResource<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
     let updated_task: db::Task = diesel::update(tasks)
-        .filter(db_schema::tasks::columns::task_id.eq(task_id))
+        .filter(db_schema::tasks::columns::task_id.eq(task_id.clone()))
         .set(db_schema::tasks::columns::completed_at.eq(diesel::dsl::now))
         .get_result(&mut db_conn)
         .await?;
 
-    Ok((
-        [(
-            axum::http::header::LOCATION,
-            format!("/api/task/{}", &updated_task.task_id),
-        )],
-        Json(updated_task.into()),
-    ))
+    Ok(ModifiedResource {
+        location: Some(format!("/api/task/{task_id}")),
+        resource: Resource::new(updated_task.into()).with_links([
+            ("unmark", format!("/api/task/{task_id}/checkmark")),
+            ("self", format!("/api/task/{task_id}")),
+        ]),
+    })
 }
 
 async fn make_uncompleted(
     State(state): State<AppState>,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<([(axum::http::HeaderName, String); 1], Json<Task>), ServerError> {
+) -> Result<ModifiedResource<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
     let updated_task: db::Task = diesel::update(tasks)
-        .filter(db_schema::tasks::columns::task_id.eq(task_id))
+        .filter(db_schema::tasks::columns::task_id.eq(task_id.clone()))
         .set(db_schema::tasks::columns::completed_at.eq(Option::<chrono::NaiveDateTime>::None))
         .get_result(&mut db_conn)
         .await?;
 
-    Ok((
-        [(
-            axum::http::header::LOCATION,
-            format!("/api/task/{}", &updated_task.task_id),
-        )],
-        Json(updated_task.into()),
-    ))
+    Ok(ModifiedResource {
+        location: Some(format!("/api/task/{task_id}")),
+        resource: Resource::new(updated_task.into()).with_links([
+            ("mark", format!("/api/task/{task_id}/checkmark")),
+            ("self", format!("/api/task/{task_id}")),
+        ]),
+    })
 }

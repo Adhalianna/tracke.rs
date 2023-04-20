@@ -11,7 +11,7 @@ pub fn router() -> ApiRouter<AppState> {
 async fn get_users_trackers(
     State(state): State<AppState>,
     axum::extract::Path(email): axum::extract::Path<EmailAddress>,
-) -> Result<Json<Vec<Tracker>>, ServerError> {
+) -> Result<Resource<Vec<Tracker>>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
     use db_schema::users::dsl::users;
@@ -28,14 +28,14 @@ async fn get_users_trackers(
         .get_results(&mut db_conn)
         .await?;
 
-    Ok(Json(user_trackers))
+    Ok(Resource::new(user_trackers))
 }
 
 async fn post_to_users_trackers(
     State(state): State<AppState>,
     axum::extract::Path(email): axum::extract::Path<EmailAddress>,
     Json(input): Json<TrackerInput>,
-) -> Result<([(axum::http::HeaderName, String); 1], Json<Tracker>), ServerError> {
+) -> Result<CreatedResource<Tracker>, ServerError> {
     let mut db_conn = state.db.get().await?;
     let new_tracker_id = input.tracker_id.unwrap_or(uuid::Uuid::now_v7().into());
     let user_uuid = {
@@ -62,11 +62,8 @@ async fn post_to_users_trackers(
         .get_result(&mut db_conn)
         .await?;
 
-    Ok((
-        [(
-            axum::http::header::LOCATION,
-            format!("/api/tracker/{}", &inserted.tracker_id),
-        )],
-        Json(inserted),
-    ))
+    Ok(CreatedResource {
+        location: format!("/api/tracker/{}", &inserted.tracker_id),
+        resource: Resource::new(inserted),
+    })
 }

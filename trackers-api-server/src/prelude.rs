@@ -11,6 +11,7 @@
 //! so remember to try adding prelude import when a trait error
 //! occurs.
 
+pub use crate::response::{CreatedResource, DeletedResource, ModifiedResource, Resource};
 pub use crate::{error::ServerError, services, AppState};
 pub use aide::{
     axum::routing, axum::ApiRouter, axum::AxumOperationHandler, axum::IntoApiResponse,
