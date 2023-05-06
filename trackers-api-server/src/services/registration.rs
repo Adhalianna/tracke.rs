@@ -1,3 +1,4 @@
+use diesel_async::scoped_futures::ScopedFutureExt;
 use models::RegistrationRequest;
 
 use crate::prelude::*;
@@ -38,35 +39,67 @@ async fn confirm_request(
     Json(code): Json<models::ConfirmationCode>,
 ) -> Result<ModifiedResource<RegistrationRequest>, ServerError> {
     let mut db_conn = state.db.get().await?;
-    use db_schema::registration_requests::dsl::registration_requests;
 
-    let req: models::db::RegistrationRequest = registration_requests
-        .find(&email)
-        .get_result(&mut db_conn)
-        .await?;
+    let transaction_res = db_conn
+        .transaction(|tx| {
+            async move {
+                use db_schema::registration_requests::dsl::registration_requests;
+                use db_schema::users::dsl::users;
 
-    if req.valid_until < chrono::Utc::now() {
-        //TODO: return client error
-        diesel::delete(registration_requests)
-            .filter(db_schema::registration_requests::columns::valid_until.lt(chrono::Utc::now()))
-            .execute(&mut db_conn)
-            .await?;
-        Err(anyhow::anyhow!("too old"))?;
-    };
-    if code != req.confirmation_code {
-        //TODO: return client error
-        Err(anyhow::anyhow!("bad code"))?;
-    };
-    let mut updated_req: models::RegistrationRequest = req.into();
-    updated_req.confirmed_with_code = true;
+                let req: models::db::RegistrationRequest =
+                    match registration_requests.find(&email).get_result(tx).await {
+                        Ok(req) => req,
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
 
-    diesel::delete(registration_requests)
-        .filter(db_schema::registration_requests::columns::email.eq(&email))
-        .execute(&mut db_conn)
+                if req.valid_until < chrono::Utc::now() {
+                    //TODO: return client error
+
+                    // Err(anyhow::anyhow!("too old"))?;
+                    return Err(diesel::result::Error::RollbackTransaction);
+                };
+                if code != req.confirmation_code {
+                    //TODO: return client error
+
+                    // Err(anyhow::anyhow!("bad code"))?;
+                    return Err(diesel::result::Error::RollbackTransaction);
+                };
+
+                let mut updated_req: models::RegistrationRequest = req.clone().into();
+                updated_req.confirmed_with_code = true;
+
+                match diesel::insert_into(users)
+                    .values(models::db::User {
+                        user_id: models::types::Uuid::new(),
+                        email: req.email,
+                        password: req.password,
+                    })
+                    .execute(tx)
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(err) => {
+                        return Err(err);
+                    }
+                };
+
+                match diesel::delete(registration_requests)
+                    .filter(db_schema::registration_requests::columns::email.eq(&email))
+                    .execute(tx)
+                    .await
+                {
+                    Ok(_) => Ok(updated_req),
+                    Err(err) => Err(err),
+                }
+            }
+            .scope_boxed()
+        })
         .await?;
 
     Ok(ModifiedResource {
         location: None,
-        resource: Resource::new(updated_req),
+        resource: Resource::new(transaction_res),
     })
 }

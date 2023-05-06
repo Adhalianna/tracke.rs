@@ -1,4 +1,6 @@
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+use std::fmt::Display;
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 #[serde(rename = "confirmation_code")]
 #[serde(transparent)]
 pub struct ConfirmationCode(std::string::String);
@@ -21,6 +23,12 @@ impl Into<String> for ConfirmationCode {
 impl PartialEq<String> for ConfirmationCode {
     fn eq(&self, other: &String) -> bool {
         self.0 == *other
+    }
+}
+
+impl Display for ConfirmationCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

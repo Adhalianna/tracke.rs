@@ -29,7 +29,7 @@ pub use diesel::{
     AsChangeset, BoolExpressionMethods, ExpressionMethods, Identifiable, Insertable, QueryDsl,
     Queryable,
 };
-pub use diesel_async::{RunQueryDsl, SaveChangesDsl};
+pub use diesel_async::{AsyncConnection, RunQueryDsl, SaveChangesDsl};
 pub use schemars::JsonSchema;
 pub use serde::{Deserialize, Serialize};
 pub use std::{

@@ -15,6 +15,53 @@ pub fn router() -> ApiRouter<AppState> {
         .api_route("/users", routing::post(start_user_registaration))
 }
 
+async fn send_registration_code_mail(
+    generated_code: &models::core::ConfirmationCode,
+    receiver: &models::types::Email,
+) -> Result<reqwest::Response, reqwest::Error> {
+    let sendgrid_api_key = {
+        #[cfg(feature = "local-dev")]
+        let key = dotenvy::var("SENDGRID_API_KEY")
+            .expect("SENDGRID_API_KEY environment variable must be set");
+        #[cfg(not(feature = "local-dev"))]
+        let key = std::env::var("SENDGRID_API_KEY")
+            .expect("SENDGRID_API_KEY environment variable must be set");
+        key
+    };
+    let sendgrid_template_id = {
+        #[cfg(feature = "local-dev")]
+        let id = dotenvy::var("SENDGRID_REG_CODE_TEMPLATE_ID")
+            .expect("SENDGRID_REG_CODE_TEMPLATE_ID environment variable must be set");
+        #[cfg(not(feature = "local-dev"))]
+        let id = std::env::var("SENDGRID_REG_CODE_TEMPLATE_ID")
+            .expect("SENDGRID_REG_CODE_TEMPLATE_ID environment variable must be set");
+        id
+    };
+    let sendgrid_sender = {
+        #[cfg(feature = "local-dev")]
+        let address = dotenvy::var("SENDGRID_MAIL_SENDER")
+            .expect("SENDGRID_MAIL_SENDER environment variable must be set");
+        #[cfg(not(feature = "local-dev"))]
+        let address = std::env::var("SENDGRID_MAIL_SENDER")
+            .expect("SENDGRID_MAIL_SENDER environment variable must be set");
+        address
+    };
+
+    let body = format!(
+        r#"{{"from":{{"email":"{sendgrid_sender}"}},"personalizations":[{{"to":[{{"email":"{receiver}"}}],"dynamic_template_data":{{"code":"{generated_code}"}}}}],"template_id":"{sendgrid_template_id}"}}"#
+    );
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://api.sendgrid.com/v3/mail/send")
+        .bearer_auth(sendgrid_api_key)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await;
+    res
+}
+
 async fn start_user_registaration(
     State(state): State<AppState>,
     Json(new_user): Json<models::UserCreation>,
@@ -22,10 +69,10 @@ async fn start_user_registaration(
     let mut db_conn = state.db.get().await?;
     use db_schema::registration_requests::dsl::registration_requests;
 
-    let code = models::ConfirmationCode::new().into();
+    let code = models::ConfirmationCode::new();
 
     #[cfg(debug_assertions)]
-    dbg!(&code);
+    println!("registration code {code} has been generated");
 
     let req: models::db::RegistrationRequest = diesel::insert_into(registration_requests)
         .values(models::db::RegistrationRequest {
@@ -35,12 +82,12 @@ async fn start_user_registaration(
                 .ok_or(anyhow::anyhow!("failed to add 10 minutes to the timestamp to construct the deadline for confirmation"))?,
             email: new_user.email.clone(),
             password: new_user.password.into_storeable(),
-            confirmation_code: code,
+            confirmation_code: code.clone().into(),
         })
         .get_result(&mut db_conn)
         .await?;
 
-    // TODO: sent an email here
+    send_registration_code_mail(&code, &new_user.email).await?;
 
     Ok(CreatedResource {
         location: format!("/api/registration-request/{}", &new_user.email),
@@ -67,7 +114,6 @@ async fn get_users_trackers(
 ) -> Result<Resource<Vec<Tracker>>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
-    use db_schema::users::dsl::users;
 
     // TODO: Check email
 

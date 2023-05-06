@@ -43,3 +43,4 @@ diesel-async = { version = "^0.2", features = [
 deadpool = { version = "^0.9", features = ["managed"] }
 dotenvy = { workspace = true, optional = true }
 indexmap = {version = "^1.9"}
+reqwest = "0.11.17"
