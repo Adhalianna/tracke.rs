@@ -1,68 +1,43 @@
-# Developement Guide
+# Contributing Guide
 
-___TODO: warn about some caveats of provided compose file___
+<!--toc:start-->
+- [Contributing Guide](#contributing-guide)
+  - [Running the Dockers](#running-the-dockers)
+    - [Services](#services)
+    - [`.env` file](#env-file)
+  - [Project structure](#project-structure)
+<!--toc:end-->
 
-Each part, back-end and front-end, may use different tools but the following instructions
-apply to both.
+## Running the Dockers
 
-## Required Tools 
+The project can be set up and used with docker compose. The compose file is
+constructed in such a way that no other than the 
+`docker compose build; docker compose` actions are needed to run the API. What
+is however required is to fill a `.env` file which should be placed at the root
+of the repository.
 
-### Docker
+### Services
 
-The project uses docker to make it simpler to work on it while using different
-OSes as a developer. To install docker one should follow the guide applicable
-to a given operating system and distribution.
- - [Windows installation guide](https://docs.docker.com/desktop/install/windows-install/)
- - [RPM or Debian based Linux distributions](https://docs.docker.com/desktop/install/linux-install/)
- - [ArchLinux based distributions](https://docs.docker.com/desktop/install/archlinux/)
+The compose file runs multiple services. Two of them are provided only to build
+correctly other images, those are the `trackers-chef` and `trackers-planner` 
+services. Along with the `migrator` service they are expected to successfully 
+exit with __0__ code. The migrator prepares the database if neccessary. Left
+running should be the __database__ and the __api__ server.
+ 
+### `.env` file
 
-Besides docker we will be using an extension to it called _docker compose_.
-It's a tool which can parse a special configuration file usually called 
-`docker-compose.yml` and run multiple containers using the file as a recipe for
-their parameters. [To use _docker compose_ on Windows or
-Mac a desktop application is required](https://docs.docker.com/compose/install/)
-or the WSL.
+The provided compose configuration expects a _.env_ file to be located at the
+root of the repository. To fill in that file correctly check the environments
+defined for the GitHub repository of the project. Access to those may require
+the collaborator role within the GitHub repository.
 
-## Using the Tools
 
-### Launching the database
+## Project structure
 
-To turn the database up execute:
-```sh
-sudo docker compose up database
-```
-The database has it's ports exposed so it can be reached from the host using:
-```sh
-psql -d trackers -h 0.0.0.0 -p 5432 -U trackers
-```
-The database may be empty when launched which can cause errors in the back-end
-application. In such a case it is recommended to run the migrator docker:
-```sh
-sudo docker compose up migrator
-```
-If the migrator docker turns out to be too slow (it should take a while to
-build only at the first run) the original cli application for managing
-migrations can be installed. Check the [back-end's README](./back-end/README.md)
-for more details.
-
-### Launching back-end server
-
-To run back-end server execute:
-```sh
-sudo docker compose up back-end
-```
-If you have the Rust toolchain available locally and want to iterate quickly
-using just `cargo` to compile the project is recommended.
-```sh
-cd back-end
-cargo dev
-```
-More information can be found in [the back-end's README](./back-end/README.md).
-
-### Launching all the components
-It is a good idea to check occasionally if all the dockers can communicate with
-each other as expected. The website they are hosting should be available from
-the host. To turn on all the services execute:
-```sh
-sudo docker compose up
-```
+The code is split into two crates:
+- `trackers-models` - defines the schema used by the Diesel ORM as well as any
+other models used by the API. The goal is to make it useful for anyone who
+would want to provide a client for the API server written in Rust or any other
+language that can use Rust source code.
+- `trackers-api-server` - the actuall API server and the place defining the
+business logic.

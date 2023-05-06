@@ -6,30 +6,25 @@ services:
     hostname: "database"
     restart: always
     image: "postgres:latest"
-    expose:
-      - "5432"
     ports:
       - 5432:5432
     volumes:
       - ./db_data/:/var/lib/postgresql/data/
     command: postgres -c shared_buffers=512MB -c wal_buffers=64MB -c work_mem=8MB
-    environment:
-      POSTGRES_USER: trackers
-      POSTGRES_PASSWORD: trackers
-      POSTGRES_DB: trackers
+    env_file: .env
     networks:
       - app-net
       
   # Common images used to build api and web-ui
   trackers-chef:
     image: trackers-chef:${TAG:-latest}
-    build: 
+    build:
       context: .
       dockerfile: ./.docker/Dockerfile.chef
-    env_file: .env.docker    
+    env_file: .env
   trackers-planner:
     image: trackers-planner
-    env_file: .env.docker    
+    env_file: .env
     build: 
       context: .
       dockerfile: ./.docker/Dockerfile.planner
@@ -43,10 +38,8 @@ services:
     build:
       context: .
       dockerfile: ./.docker/Dockerfile.api
-    env_file: .env.docker
+    env_file: .env
     ports:
-      - "4000:4000"
-    expose:
       - "4000:4000"
     networks:
       - app-net
@@ -61,7 +54,7 @@ services:
     build:
       context: .
       dockerfile: ./.docker/Dockerfile.models
-    env_file: .env.docker
+    env_file: .env
     volumes:
       - ./trackers-models:/app
     networks:

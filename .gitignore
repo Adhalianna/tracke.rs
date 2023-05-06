@@ -2,3 +2,4 @@
 /trackers-models/target
 /target
 /db_data
+.env
