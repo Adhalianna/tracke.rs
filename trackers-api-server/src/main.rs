@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod error;
 pub mod prelude;
 pub mod response;
@@ -41,7 +42,15 @@ pub async fn main() {
         db: database_connection_pool,
     };
 
-    let app = services::app_services().with_state(state);
+    let app = services::app_services()
+        .layer(axum::middleware::from_fn(crate::auth::layer::require_jwt))
+        .layer(
+            tower_http::cors::CorsLayer::new()
+                .allow_methods(tower_http::cors::AllowMethods::any())
+                .allow_origin(tower_http::cors::AllowOrigin::any())
+                .allow_headers(tower_http::cors::preflight_request_headers().collect::<Vec<_>>()),
+        )
+        .with_state(state);
 
     let server_address = {
         #[cfg(feature = "local-dev")]

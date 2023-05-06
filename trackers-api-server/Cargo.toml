@@ -11,14 +11,24 @@ local-dev = ["dotenvy"]
 
 [dependencies]
 trackers-models = { path="../trackers-models", default-features=false, features=["diesel"] }
-axum = "^0.6"
+axum = {version="^0.6", features=["headers"]}
+tower = {version="^0.4"}
+tower-http = {version="^0.4", features=["cors"]}
+once_cell={version="^1.1"}
 tokio = { version = "^1", features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
 aide = {version = "^0.10", features = ["macros", "axum", "redoc"]}
+aliri= {version="^0.6"}
+aliri_axum={version="^0.2"}
+aliri_tower={version="^0.4"}
+aliri_oauth2={version="^0.9"}
+aliri_clock={version="^0.1"}
+aliri_traits={version="^0.1"}
 schemars = {workspace = true, features = ["derive", "chrono", "uuid1"]}
 uuid = {workspace = true, features = ["serde", "fast-rng", "std", "v7"]}
 chrono = {workspace = true, default-features = false, features = ["std", "serde"]}
 humantime = {workspace = true}
+base62 = {version = "^2.0"}
 anyhow = "^1.0"
 diesel = { workspace = true, default-features = false, features = [
   "postgres_backend",

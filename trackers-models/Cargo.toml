@@ -24,3 +24,6 @@ chrono = {workspace = true, default-features = false, features = ["std", "serde"
 schemars = {workspace = true, features = ["derive", "chrono", "uuid1"]}
 base62 = {version = "^2.0"}
 fast_chemail = {version = "^0.9"}
+itertools = "0.10.5"
+bcrypt = "0.14.0"
+random-string = "1.0.0"

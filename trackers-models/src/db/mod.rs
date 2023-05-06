@@ -11,3 +11,5 @@ pub mod task;
 pub use task::*;
 pub mod user;
 pub use user::*;
+pub mod registration_req;
+pub use registration_req::*;

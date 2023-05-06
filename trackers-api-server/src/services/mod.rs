@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+pub mod registration;
+pub mod session;
 pub mod task;
 pub mod tracker;
 pub mod user;
@@ -13,7 +15,9 @@ pub fn app_services() -> axum::Router<crate::AppState> {
         ApiRouter::new()
             .merge(task::router())
             .merge(tracker::router())
-            .merge(user::router()),
+            .merge(user::router())
+            .merge(registration::router())
+            .merge(session::router()),
     );
 
     // prep the OAS

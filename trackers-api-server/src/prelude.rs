@@ -19,8 +19,16 @@ pub use aide::{
     operation::OperationInput as AideOperationInput,
     operation::OperationOutput as AideOperationOutput,
 };
-pub use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-pub use diesel::{AsChangeset, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable};
+pub use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+pub use diesel::{
+    AsChangeset, BoolExpressionMethods, ExpressionMethods, Identifiable, Insertable, QueryDsl,
+    Queryable,
+};
 pub use diesel_async::{RunQueryDsl, SaveChangesDsl};
 pub use schemars::JsonSchema;
 pub use serde::{Deserialize, Serialize};

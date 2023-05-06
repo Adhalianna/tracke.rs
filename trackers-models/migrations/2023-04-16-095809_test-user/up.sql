@@ -1,6 +1,7 @@
 -- Your SQL goes here
 INSERT INTO users VALUES 
-('00000000-0000-0000-0000-000000000000', 'test@tracke.rs', ' $2a$12$iarbQNjJQwgcuSbtWRI.qejp9Ih42UOq40g.6bM3QfmvaKS3.Aj72'::bytea);
+-- password: password$123
+('00000000-0000-0000-0000-000000000000', 'test@tracke.rs', '$2a$12$EZbyhEM/VbrWhzmOs9UAteRiJWYygryQC0cSZhDq5aKHIE56WmZby'::bytea);
 
 INSERT INTO trackers VALUES
 ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'Backlog', true),

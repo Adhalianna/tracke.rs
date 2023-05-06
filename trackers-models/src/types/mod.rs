@@ -18,3 +18,5 @@ pub mod uuid;
 pub use crate::types::uuid::Uuid;
 pub mod email;
 pub use email::Email;
+pub mod password;
+pub use password::PasswordInput;

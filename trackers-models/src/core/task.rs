@@ -8,7 +8,7 @@ pub struct Task {
     #[serde(default)]
     pub checkmarked: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub checkmarked_at: Option<chrono::NaiveDateTime>,
+    pub checkmarked_at: Option<chrono::DateTime<chrono::offset::Utc>>,
     /// The title of a task. As it is the only required descriptive field it can
     /// also be used as the sole description of the task.
     pub title: crate::types::String<256>,
@@ -21,11 +21,11 @@ pub struct Task {
     /// A self-imposed deadline. Missing this kind of deadline does not imply
     /// failing the task.
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub soft_deadline: Option<chrono::NaiveDateTime>,
+    pub soft_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     /// A hard deadline is such a deadline which if missed it implies that the
     /// task can no longer be completed.
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub hard_deadline: Option<chrono::NaiveDateTime>,
+    pub hard_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     /// Tags can be used to make filtering the tasks simple even between
     /// different task trackers.
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -59,15 +59,15 @@ pub struct TaskInput {
     #[serde(default)]
     pub checkmarked: bool,
     #[serde(default)]
-    pub completed_at: Option<chrono::NaiveDate>,
+    pub completed_at: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
     pub description: Option<crate::types::String<4096>>,
     #[serde(default)]
     pub time_estimate: Option<crate::types::Duration>,
     #[serde(default)]
-    pub soft_deadline: Option<chrono::NaiveDateTime>,
+    pub soft_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
-    pub hard_deadline: Option<chrono::NaiveDateTime>,
+    pub hard_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
     pub tags: Option<crate::types::Tags>,
 }

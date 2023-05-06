@@ -13,16 +13,22 @@ pub fn router() -> ApiRouter<AppState> {
             "/tracker/:tracker_id/tasks",
             routing::get(get_trackers_tasks).post(post_to_tracker_a_task),
         )
+        .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
 }
 
 async fn get_one_tracker(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
 ) -> Result<Resource<Tracker>, ServerError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
 
     let the_tracker: Tracker = trackers
+        .filter(db_schema::trackers::user_id.eq(user_id.0))
         .find(tracker_id.clone())
         .get_result(&mut db_conn)
         .await?;
@@ -33,6 +39,10 @@ async fn get_one_tracker(
 
 async fn replace_tracker(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
     Json(input): Json<Tracker>,
 ) -> Result<ModifiedResource<Tracker>, ServerError> {
@@ -43,8 +53,18 @@ async fn replace_tracker(
         // TODO: Error on incosistent state
     }
 
-    let tracker: Tracker = diesel::insert_into(trackers)
-        .values(input)
+    // Check if tracker actually existed before update
+    let res = trackers
+        .filter(db_schema::trackers::user_id.eq(user_id.0))
+        .find(&tracker_id)
+        .execute(&mut db_conn)
+        .await?;
+    if res < 1 {
+        todo!();
+    }
+
+    let tracker: Tracker = diesel::update(trackers)
+        .set(input)
         .get_result(&mut db_conn)
         .await?;
 
@@ -57,6 +77,10 @@ async fn replace_tracker(
 
 async fn delete_tracker(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
 ) -> Result<DeletedResource, ServerError> {
     let mut db_conn = state.db.get().await?;
@@ -64,6 +88,7 @@ async fn delete_tracker(
 
     let affected = diesel::delete(trackers)
         .filter(columns::tracker_id.eq(tracker_id))
+        .filter(columns::user_id.eq(user_id.0))
         .execute(&mut db_conn)
         .await?;
 
@@ -81,14 +106,27 @@ async fn delete_tracker(
 
 async fn get_trackers_tasks(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
 ) -> Result<Resource<Vec<Task>>, ServerError> {
     let mut db_conn = state.db.get().await?;
-    use db_schema::tasks::columns::tracker_id;
-    use db_schema::tasks::dsl::tasks;
 
-    let trackers_tasks: Vec<db::Task> = tasks
-        .filter(tracker_id.eq(the_tracker_id))
+    use diesel::query_dsl::JoinOnDsl;
+
+    let trackers_tasks: Vec<db::Task> = db_schema::trackers::table
+        .filter(
+            db_schema::trackers::columns::tracker_id
+                .eq(the_tracker_id)
+                .and(db_schema::trackers::columns::user_id.eq(user_id.0)),
+        )
+        .inner_join(
+            db_schema::tasks::table
+                .on(db_schema::tasks::tracker_id.eq(db_schema::trackers::tracker_id)),
+        )
+        .select(db_schema::tasks::all_columns)
         .load(&mut db_conn)
         .await?;
 
@@ -99,17 +137,33 @@ async fn get_trackers_tasks(
 
 async fn post_to_tracker_a_task(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
     Json(input): Json<TaskInput>,
 ) -> Result<CreatedResource<Task>, ServerError> {
     let mut db_conn = state.db.get().await?;
 
-    use db_schema::tasks::dsl::*;
-
-    let new_task_id = input.task_id.unwrap_or(uuid::Uuid::now_v7().into());
-
     if the_tracker_id != input.tracker_id {
         // TODO: Error on incosistent state
+    }
+
+    use db_schema::tasks::dsl::*;
+    let new_task_id = input.task_id.unwrap_or(uuid::Uuid::now_v7().into());
+
+    // Check if the tracker is owned by the user
+    let res = db_schema::trackers::table
+        .filter(
+            db_schema::trackers::tracker_id
+                .eq(the_tracker_id)
+                .and(db_schema::trackers::user_id.eq(user_id.0)),
+        )
+        .execute(&mut db_conn)
+        .await?;
+    if res < 1 {
+        todo!()
     }
 
     diesel::insert_into(tasks)
@@ -120,7 +174,7 @@ async fn post_to_tracker_a_task(
             description: input.description,
             completed_at: {
                 if input.checkmarked {
-                    Some(chrono::Local::now().naive_local())
+                    Some(chrono::Utc::now())
                 } else {
                     None
                 }

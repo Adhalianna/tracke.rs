@@ -1,6 +1,18 @@
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, schemars::JsonSchema)]
-#[cfg_attr(feature = "diesel", derive(diesel::Queryable, diesel::Insertable))]
+#[cfg_attr(
+    feature = "diesel",
+    derive(
+        diesel::Queryable,
+        diesel::Insertable,
+        diesel::Associations,
+        diesel::AsChangeset
+    )
+)]
 #[cfg_attr(feature="diesel", diesel(table_name = crate::db::schema::trackers))]
+#[cfg_attr(
+    feature = "diesel",
+    diesel(belongs_to(crate::db::user::User, foreign_key = user_id))
+)]
 pub struct Tracker {
     pub tracker_id: crate::types::Uuid,
     pub user_id: crate::types::Uuid,
