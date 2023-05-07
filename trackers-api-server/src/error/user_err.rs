@@ -2,69 +2,76 @@ use super::*;
 use crate::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Debug, JsonSchema)]
-pub enum UserError {
-    BadRequest(BadRequestError),
-    Unauthorized(UnathorizedError),
-    NotFound(NotFoundError),
-    Conflict(ConflictError),
-}
-
-impl crate::error::ApiErrorTrait for UserError {
-    fn status(&self) -> u16 {
-        match self {
-            UserError::BadRequest(e) => e.status(),
-            UserError::Unauthorized(e) => e.status(),
-            UserError::NotFound(e) => e.status(),
-            UserError::Conflict(e) => e.status(),
-        }
-    }
-
-    fn msg(&self) -> String {
-        match self {
-            UserError::BadRequest(e) => e.msg(),
-            UserError::Unauthorized(e) => e.msg(),
-            UserError::NotFound(e) => e.msg(),
-            UserError::Conflict(e) => e.msg(),
-        }
-    }
-
-    fn links(&self) -> &Option<HashMap<&'static str, String>> {
-        match self {
-            UserError::BadRequest(e) => e.links(),
-            UserError::Unauthorized(e) => e.links(),
-            UserError::NotFound(e) => e.links(),
-            UserError::Conflict(e) => e.links(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(from = "ApiError")]
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(into = "ApiError")]
 pub struct BadRequestError {
     pub msg: String,
     pub links: Option<HashMap<&'static str, String>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(from = "ApiError")]
+impl BadRequestError {
+    pub fn with_msg(mut self, msg: impl std::fmt::Display) -> Self {
+        self.msg = msg.to_string();
+        self
+    }
+    pub fn with_links(mut self, links: impl IntoIterator<Item = (&'static str, String)>) -> Self {
+        self.links.get_or_insert(HashMap::default()).extend(links);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(into = "ApiError")]
 pub struct UnathorizedError {
     pub msg: String,
     pub links: Option<HashMap<&'static str, String>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(from = "ApiError")]
+impl UnathorizedError {
+    pub fn with_msg(mut self, msg: impl std::fmt::Display) -> Self {
+        self.msg = msg.to_string();
+        self
+    }
+    pub fn with_links(mut self, links: impl IntoIterator<Item = (&'static str, String)>) -> Self {
+        self.links.get_or_insert(HashMap::default()).extend(links);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(into = "ApiError")]
 pub struct NotFoundError {
     pub msg: String,
     pub links: Option<HashMap<&'static str, String>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(from = "ApiError")]
+impl NotFoundError {
+    pub fn with_msg(mut self, msg: impl std::fmt::Display) -> Self {
+        self.msg = msg.to_string();
+        self
+    }
+    pub fn with_links(mut self, links: impl IntoIterator<Item = (&'static str, String)>) -> Self {
+        self.links.get_or_insert(HashMap::default()).extend(links);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(into = "ApiError")]
 pub struct ConflictError {
     pub msg: String,
     pub links: Option<HashMap<&'static str, String>>,
+}
+
+impl ConflictError {
+    pub fn with_msg(mut self, msg: impl std::fmt::Display) -> Self {
+        self.msg = msg.to_string();
+        self
+    }
+    pub fn with_links(mut self, links: impl IntoIterator<Item = (&'static str, String)>) -> Self {
+        self.links.get_or_insert(HashMap::default()).extend(links);
+        self
+    }
 }
 
 impl crate::error::ApiErrorTrait for BadRequestError {

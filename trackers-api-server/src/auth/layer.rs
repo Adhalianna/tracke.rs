@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use axum::{body::HttpBody, response::IntoResponse};
+
 use super::UserClaims;
 
 const ISSUER: &str = "authority";
@@ -8,7 +12,7 @@ const SHARED_SECRET: &[u8] = b"test";
 pub async fn require_jwt<B: axum::body::HttpBody>(
     request: axum::http::Request<B>,
     next: axum::middleware::Next<B>,
-) -> Result<axum::response::Response, axum::http::StatusCode> {
+) -> axum::response::Response {
     let mut response = next.run(request).await;
 
     response.headers_mut().insert(
@@ -17,7 +21,7 @@ pub async fn require_jwt<B: axum::body::HttpBody>(
             .expect("failed to save JWT into response headers"),
     );
 
-    Ok(response)
+    response
 }
 
 pub fn validator() -> &'static aliri::jwt::CoreValidator {
@@ -47,11 +51,78 @@ pub fn authority() -> &'static aliri_oauth2::Authority {
     })
 }
 
-pub fn authorizer<B: axum::body::HttpBody + Default>(
-) -> aliri_tower::Oauth2Authorizer<crate::auth::UserClaims, aliri_tower::TerseErrorHandler<B>> {
+#[derive(Clone, Default)]
+pub struct AuthErrorHandler;
+
+impl aliri_tower::OnJwtError for AuthErrorHandler {
+    type Body = axum::body::BoxBody;
+
+    fn on_missing_or_malformed(&self) -> axum::http::Response<Self::Body> {
+        crate::error::UnathorizedError::default()
+            .with_msg("authorization token is missing or malformed")
+            .with_links([
+                ("new session", "/api/session/token".into()),
+                ("documentation", "/doc".into()),
+            ])
+            .into_response()
+    }
+
+    fn on_no_matching_jwk(&self) -> axum::http::Response<Self::Body> {
+        crate::error::UnathorizedError::default()
+            .with_msg("failed to find matching JWK")
+            .with_links([
+                ("new session", "/api/session/token".into()),
+                ("documentation", "/doc".into()),
+            ])
+            .into_response()
+    }
+
+    fn on_jwt_invalid(
+        &self,
+        error: aliri::error::JwtVerifyError,
+    ) -> axum::http::Response<Self::Body> {
+        crate::error::UnathorizedError::default()
+            .with_msg(error)
+            .with_links([
+                ("new session", "/api/session/token".into()),
+                ("documentation", "/doc".into()),
+            ])
+            .into_response()
+    }
+}
+
+impl aliri_tower::OnScopeError for AuthErrorHandler {
+    type Body = axum::body::BoxBody;
+
+    fn on_missing_scope_claim(&self) -> axum::http::Response<Self::Body> {
+        crate::error::UnathorizedError::default()
+            .with_msg("authorization token is missing scope claims")
+            .with_links([
+                ("new session", "/api/session/token".into()),
+                ("documentation", "/doc".into()),
+            ])
+            .into_response()
+    }
+
+    fn on_scope_policy_failure(
+        &self,
+        _held: &aliri_oauth2::Scope,
+        _policy: &aliri_oauth2::ScopePolicy,
+    ) -> axum::http::Response<Self::Body> {
+        crate::error::UnathorizedError::default()
+            .with_msg(format!("failed to meet required policies with held token"))
+            .with_links([
+                ("new session", "/api/session/token".into()),
+                ("documentation", "/doc".into()),
+            ])
+            .into_response()
+    }
+}
+
+pub fn authorizer() -> aliri_tower::Oauth2Authorizer<crate::auth::UserClaims, AuthErrorHandler> {
     aliri_tower::Oauth2Authorizer::new()
         .with_claims::<crate::auth::UserClaims>()
-        .with_terse_error_handler::<B>()
+        .with_error_handler(AuthErrorHandler::default())
 }
 
 pub fn new_token_with_exp_and_scopes(

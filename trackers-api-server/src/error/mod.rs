@@ -9,8 +9,7 @@ pub use user::*;
 pub mod server;
 pub use server::*;
 
-mod conv;
-mod foreign;
+mod response_impl;
 mod schema_impl;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -21,6 +20,7 @@ pub struct ApiError {
     /// Error message
     pub msg: String,
     /// Links applicable in given situation
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<HashMap<&'static str, String>>,
 }
 
@@ -30,33 +30,25 @@ pub trait ApiErrorTrait {
     fn links(&self) -> &Option<HashMap<&'static str, String>>;
 }
 
-/// An enum that can be used to construct the ApiError
-pub enum Err {
-    /// 40X family of errors - the client side errors.
-    UserError(UserError),
-    /// Simple 500 status error with no unneccessary details.
-    ServerError(ServerError),
+impl<T> From<T> for ApiError
+where
+    T: ApiErrorTrait,
+{
+    fn from(value: T) -> Self {
+        Self {
+            status: value.status(),
+            msg: value.msg(),
+            links: value.links().to_owned(),
+        }
+    }
 }
 
-impl ApiErrorTrait for Err {
-    fn status(&self) -> u16 {
-        match self {
-            Err::UserError(err) => err.status(),
-            Err::ServerError(err) => err.status(),
-        }
-    }
-
-    fn msg(&self) -> String {
-        match self {
-            Err::UserError(err) => err.msg(),
-            Err::ServerError(err) => err.msg(),
-        }
-    }
-
-    fn links(&self) -> &Option<HashMap<&'static str, String>> {
-        match self {
-            Err::UserError(err) => err.links(),
-            Err::ServerError(err) => err.links(),
-        }
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            axum::http::StatusCode::from_u16(self.status).unwrap(),
+            Json(self),
+        )
+            .into_response()
     }
 }
