@@ -21,6 +21,7 @@ pub fn app_services() -> axum::Router<crate::AppState> {
     );
 
     // prep the OAS
+    aide::gen::all_error_responses(true);
     let mut openapi_doc = openapi::OpenApi {
         info: openapi::Info {
             title: "tracke.rs".to_owned(),
@@ -38,6 +39,7 @@ pub fn app_services() -> axum::Router<crate::AppState> {
         },
         ..openapi::OpenApi::default()
     };
+
     let api_router = api_router.finish_api(&mut openapi_doc);
 
     // serve the docs and the OAS

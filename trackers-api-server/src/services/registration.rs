@@ -36,9 +36,18 @@ async fn get_request(
 async fn confirm_request(
     State(state): State<AppState>,
     Path(email): Path<models::types::Email>,
-    Json(code): Json<models::ConfirmationCode>,
-) -> Result<ModifiedResource<RegistrationRequest>, ServerError> {
+    json: JsonExtract<models::ConfirmationCode>,
+) -> Result<ModifiedResource<RegistrationRequest>, ApiError> {
     let mut db_conn = state.db.get().await?;
+    let code = json.data;
+
+    // The api error to be returned will be saved outside the transaction.
+    // This trick is performed to avoid unnecessary and difficult to understand later trait
+    // impl shenanigans.
+    //
+    // ... still, this is a among first candidates for a refactor
+    let mut caught_api_err = None;
+    let api_err = &mut caught_api_err;
 
     let transaction_res = db_conn
         .transaction(|tx| {
@@ -54,16 +63,38 @@ async fn confirm_request(
                         }
                     };
 
+                // Request no longer valid
                 if req.valid_until < chrono::Utc::now() {
-                    //TODO: return client error
-
-                    // Err(anyhow::anyhow!("too old"))?;
-                    return Err(diesel::result::Error::RollbackTransaction);
+                    // save the api err
+                    *api_err = Some(
+                        GoneError::default()
+                            .with_docs()
+                            .with_msg("the request is no longer valid")
+                            .into(),
+                    );
+                    // remove invalid request
+                    let clean_up_res = diesel::delete(registration_requests)
+                        .filter(db_schema::registration_requests::columns::email.eq(&req.email))
+                        .execute(tx)
+                        .await;
+                    // check and finish early if transaction successful
+                    match clean_up_res {
+                        Ok(_) => return Ok(None),
+                        Err(_) => {
+                            return Err(diesel::result::Error::RollbackTransaction);
+                        }
+                    }
                 };
-                if code != req.confirmation_code {
-                    //TODO: return client error
 
-                    // Err(anyhow::anyhow!("bad code"))?;
+                // Not the code we expected
+                if code != req.confirmation_code {
+                    // save the api err
+                    *api_err = Some(
+                        BadRequestError::default()
+                            .with_docs()
+                            .with_msg("incorrect code")
+                            .into(),
+                    );
                     return Err(diesel::result::Error::RollbackTransaction);
                 };
 
@@ -79,10 +110,10 @@ async fn confirm_request(
                     .execute(tx)
                     .await
                 {
-                    Ok(_) => {}
                     Err(err) => {
                         return Err(err);
                     }
+                    _ => {}
                 };
 
                 match diesel::delete(registration_requests)
@@ -90,16 +121,27 @@ async fn confirm_request(
                     .execute(tx)
                     .await
                 {
-                    Ok(_) => Ok(updated_req),
                     Err(err) => Err(err),
+                    _ => Ok(Some(updated_req)),
                 }
             }
             .scope_boxed()
         })
-        .await?;
+        .await;
+
+    // Return early with API error if we had any
+    if let Some(caught_api_err) = caught_api_err {
+        return Err(caught_api_err);
+    };
+
+    // Extract the registration request or handle the transaction errors
+    let registration_res = match transaction_res {
+        Ok(reg) => reg.unwrap(),
+        Err(transaction_err) => Err(transaction_err)?,
+    };
 
     Ok(ModifiedResource {
         location: None,
-        resource: Resource::new(transaction_res),
+        resource: Resource::new(registration_res),
     })
 }

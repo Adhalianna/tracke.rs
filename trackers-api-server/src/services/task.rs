@@ -16,7 +16,6 @@ pub fn router() -> ApiRouter<AppState> {
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
 }
 
-// TODO: protect from unauthorized use (check if user, from session, owns the task)
 async fn get_one_task(
     State(state): State<AppState>,
     crate::auth::VariableScope(user_id): crate::auth::VariableScope<
@@ -24,17 +23,21 @@ async fn get_one_task(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Resource<Task>, ServerError> {
+) -> Result<Resource<Task>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
-    let the_task: db::Task = tasks
+    let (the_task, task_user_id) = tasks
         .inner_join(db_schema::trackers::table)
         .filter(db_schema::tasks::task_id.eq(task_id.clone()))
-        .filter(db_schema::trackers::user_id.eq(user_id.0))
-        .select(db_schema::tasks::all_columns)
-        .first::<db::Task>(&mut db_conn)
+        // .filter(db_schema::trackers::user_id.eq(user_id.0))
+        .select((db_schema::tasks::all_columns, db_schema::trackers::user_id))
+        .first::<(db::Task, models::types::Uuid)>(&mut db_conn)
         .await?;
+
+    if task_user_id != user_id.0 {
+        Err(ForbiddenError::default().with_msg("no access to the selected task"))?;
+    }
 
     let resource: Resource<Task> = Resource::new(the_task.into());
 
@@ -52,7 +55,7 @@ async fn make_completed(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<ModifiedResource<Task>, ServerError> {
+) -> Result<ModifiedResource<Task>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
@@ -64,7 +67,7 @@ async fn make_completed(
         .execute(&mut db_conn)
         .await?;
     if res < 1 {
-        todo!()
+        Err(ForbiddenError::default().with_msg("no access to selected task"))?;
     }
 
     let updated_task: db::Task = diesel::update(tasks)
@@ -89,7 +92,7 @@ async fn make_uncompleted(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(task_id): axum::extract::Path<Base62Uuid>,
-) -> Result<ModifiedResource<Task>, ServerError> {
+) -> Result<ModifiedResource<Task>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
@@ -101,7 +104,7 @@ async fn make_uncompleted(
         .execute(&mut db_conn)
         .await?;
     if res < 1 {
-        todo!()
+        Err(ForbiddenError::default().with_msg("no access to selected task"))?;
     }
 
     let updated_task: db::Task = diesel::update(tasks)

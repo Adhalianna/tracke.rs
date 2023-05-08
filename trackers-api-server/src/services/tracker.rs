@@ -23,15 +23,19 @@ async fn get_one_tracker(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Resource<Tracker>, ServerError> {
+) -> Result<Resource<Tracker>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
 
     let the_tracker: Tracker = trackers
-        .filter(db_schema::trackers::user_id.eq(user_id.0))
+        // .filter(db_schema::trackers::user_id.eq(user_id.0))
         .find(tracker_id.clone())
         .get_result(&mut db_conn)
         .await?;
+
+    if the_tracker.user_id != user_id.0 {
+        Err(ForbiddenError::default().with_msg("no access to the selected task tracker"))?;
+    }
 
     Ok(Resource::new(the_tracker)
         .with_links([("tasks", format!("/api/tracker/{tracker_id}/tasks"))]))
@@ -44,26 +48,39 @@ async fn replace_tracker(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
-    Json(input): Json<Tracker>,
-) -> Result<ModifiedResource<Tracker>, ServerError> {
+    json: JsonExtract<Tracker>,
+) -> Result<ModifiedResource<Tracker>, ApiError> {
     let mut db_conn = state.db.get().await?;
-    use db_schema::trackers::dsl::trackers;
+    let input = json.data;
 
     if tracker_id != input.tracker_id {
-        // TODO: Error on incosistent state
+        Err(
+            ConflictError::default().with_msg("path parameters and payload fields are mismatching")
+        )?;
     }
 
     // Check if tracker actually existed before update
-    let res = trackers
-        .filter(db_schema::trackers::user_id.eq(user_id.0))
+    let res = db_schema::trackers::table
+        .filter(db_schema::trackers::user_id.eq(&user_id.0))
         .find(&tracker_id)
         .execute(&mut db_conn)
         .await?;
     if res < 1 {
-        todo!();
+        let user_email: String = db_schema::users::table
+            .find(&user_id.0)
+            .select(db_schema::users::email)
+            .get_result(&mut db_conn)
+            .await?;
+
+        Err(ConflictError::default()
+            .with_msg("no such tracker exists, create one with a POST request")
+            .with_links([
+                ("documentation", "/doc".into()),
+                ("new tracker", format!("/api/user/{user_email}/trackers")),
+            ]))?;
     }
 
-    let tracker: Tracker = diesel::update(trackers)
+    let tracker: Tracker = diesel::update(db_schema::trackers::table)
         .set(input)
         .get_result(&mut db_conn)
         .await?;
@@ -82,7 +99,7 @@ async fn delete_tracker(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<DeletedResource, ServerError> {
+) -> Result<DeletedResource, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::{columns, dsl::trackers};
 
@@ -95,8 +112,7 @@ async fn delete_tracker(
     if affected < 1 {
         // NOTE: We assume it is impossible to get more than 1 row affected as tracker_id
         // is a primary key and filtering by it should cause at most one row affected.
-
-        // TODO: Error, not found
+        Err(NotFoundError::default().with_msg("failed to find selected tracker"))?;
     }
 
     Ok(DeletedResource {
@@ -111,7 +127,7 @@ async fn get_trackers_tasks(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
-) -> Result<Resource<Vec<Task>>, ServerError> {
+) -> Result<Resource<Vec<Task>>, ApiError> {
     let mut db_conn = state.db.get().await?;
 
     use diesel::query_dsl::JoinOnDsl;
@@ -142,12 +158,15 @@ async fn post_to_tracker_a_task(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
-    Json(input): Json<TaskInput>,
-) -> Result<CreatedResource<Task>, ServerError> {
+    json: JsonExtract<TaskInput>,
+) -> Result<CreatedResource<Task>, ApiError> {
     let mut db_conn = state.db.get().await?;
+    let input = json.data;
 
     if the_tracker_id != input.tracker_id {
-        // TODO: Error on incosistent state
+        Err(ConflictError::default().with_msg(
+            "tracker id given in the path does not match with the tracker id provided in the body",
+        ).with_docs())?;
     }
 
     use db_schema::tasks::dsl::*;

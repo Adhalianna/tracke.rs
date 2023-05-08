@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod error;
+pub mod json;
 pub mod prelude;
 pub mod response;
 pub mod services;

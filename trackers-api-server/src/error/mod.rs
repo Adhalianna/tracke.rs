@@ -9,10 +9,11 @@ pub use user::*;
 pub mod server;
 pub use server::*;
 
+mod foreign;
 mod response_impl;
 mod schema_impl;
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(bound(deserialize = "'de: 'static"))]
 pub struct ApiError {
     /// HTTP status code repeated once more
@@ -23,6 +24,14 @@ pub struct ApiError {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<HashMap<&'static str, String>>,
 }
+
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{status: {}, msg: {}}}", self.status, self.msg)
+    }
+}
+
+impl std::error::Error for ApiError {}
 
 pub trait ApiErrorTrait {
     fn status(&self) -> u16;

@@ -12,7 +12,14 @@
 //! occurs.
 
 pub use crate::response::{CreatedResource, DeletedResource, ModifiedResource, Resource};
-pub use crate::{error::ServerError, services, AppState};
+pub use crate::{
+    error::{
+        ApiError, BadRequestError, ConflictError, ForbiddenError, GoneError, NotFoundError,
+        ServerError, UnathorizedError,
+    },
+    json::JsonExtract,
+    services, AppState,
+};
 pub use aide::{
     axum::routing, axum::ApiRouter, axum::AxumOperationHandler, axum::IntoApiResponse,
     axum::RouterExt, openapi, operation::OperationHandler as AideOperationHandler,

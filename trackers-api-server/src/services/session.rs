@@ -2,11 +2,9 @@ use crate::{auth::scope::ScopeVariable, prelude::*};
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .route(
+        .api_route(
             "/session",
-            axum::routing::post(|| async {
-                axum::response::Redirect::permanent("/api/session/token")
-            }),
+            routing::post(|| async { axum::response::Redirect::permanent("/api/session/token") }),
         )
         .api_route("/session/token", routing::post(authenticate))
 }
@@ -50,20 +48,29 @@ pub struct AccessToken {
 pub async fn authenticate(
     State(state): State<AppState>,
     axum::extract::Form(form): axum::extract::Form<AuthReq>,
-) -> Result<Json<AccessToken>, ServerError> {
+) -> Result<Json<AccessToken>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::sessions::dsl::sessions;
     use db_schema::users::dsl::users;
 
     match form {
         AuthReq::Password(form) => {
-            let user: models::db::User = users
+            let user_search_res: Result<models::db::User, _> = users
                 .filter(db_schema::users::email.eq(form.username))
                 .first(&mut db_conn)
-                .await?;
+                .await;
+            let user: models::db::User = match user_search_res {
+                Ok(user) => user,
+                Err(err) => match err {
+                    diesel::result::Error::NotFound => {
+                        Err(BadRequestError::default().with_msg("email or password not correct"))?
+                    }
+                    _ => Err(err)?,
+                },
+            };
             // check password:
             if !form.password.match_with(user.password) {
-                return Err(anyhow::anyhow!("Passowrd or user name wrong").into());
+                Err(BadRequestError::default().with_msg("email or password not correct"))?;
             }
             // generate tokens:
             let access_token = crate::auth::layer::new_token_with_exp_and_scopes(
@@ -136,7 +143,9 @@ pub async fn authenticate(
                 }))
             } else {
                 // cannot refresh anymore
-                Err(anyhow::anyhow!("No longer can refresh").into())
+                Err(BadRequestError::default()
+                    .with_msg("the session can no longer be refreshed")
+                    .into())
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{json::ApiJsonRejection, prelude::*};
 use models::{RegistrationRequest, Tracker, TrackerInput, UserCreation};
 
 pub fn router() -> ApiRouter<AppState> {
@@ -62,31 +62,85 @@ async fn send_registration_code_mail(
     res
 }
 
+/// Modifies the default json rejection to be a bit more user friendly
+/// It is a little bit ugly patch tho
+pub struct UserCreationRejection;
+impl crate::json::FromJsonRejection for UserCreationRejection {
+    type NewRejection = BadRequestError;
+
+    fn from_rejection(rejection: axum::extract::rejection::JsonRejection) -> Self::NewRejection {
+        match rejection {
+            axum::extract::rejection::JsonRejection::JsonDataError(err) => {
+                let mut msg = err
+                    .body_text()
+                    .strip_prefix(&(err.to_string() + ": "))
+                    .unwrap()
+                    .to_owned();
+                if let Some(passwd_msg) = msg.strip_prefix("password: ") {
+                    msg = String::new() + "password too weak; " + passwd_msg;
+                    msg = msg.split_at(msg.find(" at line").unwrap()).0.to_owned();
+                };
+                BadRequestError::default().with_docs().with_msg(msg)
+            }
+            _ => crate::json::ApiJsonRejection::from_rejection(rejection),
+        }
+    }
+}
+
+impl aide::OperationOutput for UserCreationRejection {
+    type Inner = BadRequestError;
+    fn inferred_responses(
+        ctx: &mut aide::gen::GenContext,
+        operation: &mut openapi::Operation,
+    ) -> Vec<(Option<u16>, openapi::Response)> {
+        crate::json::ApiJsonRejection::inferred_responses(ctx, operation)
+        // TODO: provide stricter examples instead
+    }
+}
+
 async fn start_user_registaration(
     State(state): State<AppState>,
-    Json(new_user): Json<models::UserCreation>,
-) -> Result<CreatedResource<RegistrationRequest>, ServerError> {
+    json: JsonExtract<models::UserCreation, UserCreationRejection>,
+) -> Result<CreatedResource<RegistrationRequest>, ApiError> {
     let mut db_conn = state.db.get().await?;
-    use db_schema::registration_requests::dsl::registration_requests;
+    let new_user = json.extract();
 
+    // Check if ToS accepted
+    if !new_user.accepted_tos {
+        Err(BadRequestError::default()
+            .with_msg("terms of service must be accepted for a user to create an account"))?;
+    }
+
+    // Check if email is free and can be used to create a new account
+    let existing_users_with_email = db_schema::users::table
+        .filter(db_schema::users::email.eq(&new_user.email))
+        .execute(&mut db_conn)
+        .await?;
+    if existing_users_with_email > 0 {
+        Err(ConflictError::default().with_msg("email already taken by another account"))?;
+    }
+
+    // Generate confirmation code
     let code = models::ConfirmationCode::new();
-
     #[cfg(debug_assertions)]
     println!("registration code {code} has been generated");
 
-    let req: models::db::RegistrationRequest = diesel::insert_into(registration_requests)
-        .values(models::db::RegistrationRequest {
-            issued_at: chrono::offset::Utc::now(),
-            valid_until: chrono::offset::Utc::now()
-                .checked_add_signed(chrono::Duration::minutes(10))
-                .ok_or(anyhow::anyhow!("failed to add 10 minutes to the timestamp to construct the deadline for confirmation"))?,
-            email: new_user.email.clone(),
-            password: new_user.password.into_storeable(),
-            confirmation_code: code.clone().into(),
-        })
-        .get_result(&mut db_conn)
-        .await?;
+    // Create registration request
+    let req: models::db::RegistrationRequest =
+        diesel::insert_into(db_schema::registration_requests::table)
+            .values(models::db::RegistrationRequest {
+                issued_at: chrono::offset::Utc::now(),
+                valid_until: chrono::offset::Utc::now()
+                    .checked_add_signed(chrono::Duration::minutes(10))
+                    .unwrap(),
+                email: new_user.email.clone(),
+                password: new_user.password.into_storeable(),
+                confirmation_code: code.clone().into(),
+            })
+            .get_result(&mut db_conn)
+            .await?;
 
+    // Send the code through an email with SendGrid
     send_registration_code_mail(&code, &new_user.email).await?;
 
     Ok(CreatedResource {
@@ -111,45 +165,66 @@ async fn get_users_trackers(
         crate::auth::UserClaims,
     >,
     axum::extract::Path(email): axum::extract::Path<EmailAddress>,
-) -> Result<Resource<Vec<Tracker>>, ServerError> {
+) -> Result<Resource<Vec<Tracker>>, ApiError> {
     let mut db_conn = state.db.get().await?;
     use db_schema::trackers::dsl::trackers;
 
-    // TODO: Check email
-
     let user_trackers: Vec<Tracker> = trackers
-        .filter(db_schema::trackers::user_id.eq(user_id.0))
+        .inner_join(db_schema::users::table)
+        .select(db_schema::trackers::all_columns)
+        .filter(
+            db_schema::trackers::user_id
+                .eq(user_id.0)
+                .and(db_schema::users::email.eq(email)),
+        )
         .get_results(&mut db_conn)
         .await?;
+
+    if user_trackers.is_empty() {
+        Err(NotFoundError::default().with_msg("failed to find any accessible trackers"))?;
+    }
 
     Ok(Resource::new(user_trackers))
 }
 
 async fn post_to_users_trackers(
     State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
     axum::extract::Path(email): axum::extract::Path<EmailAddress>,
-    Json(input): Json<TrackerInput>,
-) -> Result<CreatedResource<Tracker>, ServerError> {
+    json: JsonExtract<TrackerInput>,
+) -> Result<CreatedResource<Tracker>, ApiError> {
     let mut db_conn = state.db.get().await?;
+    let input = json.data;
+
     let new_tracker_id = input.tracker_id.unwrap_or(uuid::Uuid::now_v7().into());
-    let user_uuid = {
-        if let Some(id) = input.user_id {
-            id
-        } else {
-            let id = db_schema::users::dsl::users
-                .filter(db_schema::users::columns::email.eq(email))
-                .limit(1)
-                .select(db_schema::users::columns::user_id)
-                .get_result(&mut db_conn)
-                .await?;
-            id
-        }
+
+    if let Some(input_user_id) = input.user_id {
+        if input_user_id != user_id.0 {
+            Err(ForbiddenError::default()
+                .with_msg("cannot add trackers for such user from current session"))?;
+        };
     };
+
+    let user_exists = db_schema::users::table
+        .filter(
+            db_schema::users::email
+                .eq(email)
+                .and(db_schema::users::user_id.eq(&user_id.0)),
+        )
+        .execute(&mut db_conn)
+        .await?;
+    if user_exists < 1 {
+        Err(ForbiddenError::default()
+            .with_msg("cannot add trackers for such user from current session"))?;
+    }
 
     let inserted: Tracker = diesel::insert_into(db_schema::trackers::dsl::trackers)
         .values(Tracker {
             tracker_id: new_tracker_id,
-            user_id: user_uuid,
+            user_id: user_id.0,
             name: input.name,
             is_default: false,
         })

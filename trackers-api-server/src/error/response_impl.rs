@@ -24,3 +24,9 @@ impl IntoResponse for ConflictError {
         (axum::http::StatusCode::CONFLICT, Json(self)).into_response()
     }
 }
+
+impl IntoResponse for ForbiddenError {
+    fn into_response(self) -> axum::response::Response {
+        (axum::http::StatusCode::FORBIDDEN, Json(self)).into_response()
+    }
+}
