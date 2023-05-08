@@ -3,7 +3,7 @@ use models::{RegistrationRequest, Tracker, TrackerInput, UserCreation};
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .api_route(
+        .api_route_with(
             "/user/:email/trackers",
             routing::get(get_users_trackers)
                 .post(post_to_users_trackers)
@@ -11,8 +11,11 @@ pub fn router() -> ApiRouter<AppState> {
                     crate::auth::layer::authorizer()
                         .jwt_layer(crate::auth::layer::authority().clone()),
                 ),
+            |op| op.tag("Task Management"),
         )
-        .api_route("/users", routing::post(start_user_registaration))
+        .api_route_with("/users", routing::post(start_user_registaration), |op| {
+            op.tag("Registration")
+        })
 }
 
 async fn send_registration_code_mail(

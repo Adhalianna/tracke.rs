@@ -6,12 +6,15 @@ use models::{
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .api_route("/task/:task_id", routing::get(get_one_task))
-        .api_route(
+        .api_route_with("/task/:task_id", routing::get(get_one_task), |op| {
+            op.tag("Task Management")
+        })
+        .api_route_with(
             "/task/:task_id/checkmark",
             routing::post(make_completed)
                 .put(make_completed)
                 .delete(make_uncompleted),
+            |op| op.tag("Task Management"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
 }

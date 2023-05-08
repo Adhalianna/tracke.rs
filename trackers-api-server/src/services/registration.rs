@@ -5,10 +5,15 @@ use crate::prelude::*;
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .api_route("/registration-request/:email", routing::get(get_request))
-        .api_route(
+        .api_route_with(
+            "/registration-request/:email",
+            routing::get(get_request),
+            |op| op.tag("Registration"),
+        )
+        .api_route_with(
             "/registration-request/:email/code",
             routing::post(confirm_request),
+            |op| op.tag("Registration"),
         )
 }
 

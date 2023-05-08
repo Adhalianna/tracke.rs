@@ -2,11 +2,15 @@ use crate::{auth::scope::ScopeVariable, prelude::*};
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .api_route(
+        .route(
             "/session",
-            routing::post(|| async { axum::response::Redirect::permanent("/api/session/token") }),
+            axum::routing::post(|| async {
+                axum::response::Redirect::permanent("/api/session/token")
+            }),
         )
-        .api_route("/session/token", routing::post(authenticate))
+        .api_route_with("/session/token", routing::post(authenticate), |op| {
+            op.tag("Log-in")
+        })
 }
 
 /// OAuth2 authentication request. The server supports only resource owner flow

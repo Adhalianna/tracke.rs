@@ -3,15 +3,17 @@ use models::{db, Task, TaskInput, Tracker};
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
-        .api_route(
+        .api_route_with(
             "/tracker/:tracker_id",
             routing::get(get_one_tracker)
                 .put(replace_tracker)
                 .delete(delete_tracker),
+            |op| op.tag("Task Management"),
         )
-        .api_route(
+        .api_route_with(
             "/tracker/:tracker_id/tasks",
             routing::get(get_trackers_tasks).post(post_to_tracker_a_task),
+            |op| op.tag("Task Management"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
 }
