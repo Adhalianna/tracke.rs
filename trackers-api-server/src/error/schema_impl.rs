@@ -5,7 +5,7 @@ impl AideOperationOutput for ApiError {
     type Inner = Self;
 
     fn inferred_responses(
-        ctx: &mut aide::gen::GenContext,
+        _ctx: &mut aide::gen::GenContext,
         _operation: &mut openapi::Operation,
     ) -> Vec<(Option<u16>, Response)> {
         Vec::new()

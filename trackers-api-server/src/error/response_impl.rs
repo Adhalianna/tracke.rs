@@ -1,5 +1,4 @@
 use super::*;
-use crate::prelude::*;
 
 impl IntoResponse for BadRequestError {
     fn into_response(self) -> axum::response::Response {

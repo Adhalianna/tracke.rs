@@ -1,4 +1,4 @@
-use crate::{json::ApiJsonRejection, prelude::*};
+use crate::prelude::*;
 use models::{RegistrationRequest, Tracker, TrackerInput, UserCreation};
 
 pub fn router() -> ApiRouter<AppState> {
@@ -103,7 +103,7 @@ impl aide::OperationOutput for UserCreationRejection {
 
 async fn start_user_registaration(
     State(state): State<AppState>,
-    json: JsonExtract<models::UserCreation, UserCreationRejection>,
+    json: JsonExtract<UserCreation, UserCreationRejection>,
 ) -> Result<CreatedResource<RegistrationRequest>, ApiError> {
     let mut db_conn = state.db.get().await?;
     let new_user = json.extract();

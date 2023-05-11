@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
-use axum::{body::HttpBody, response::IntoResponse};
-
+use axum::response::IntoResponse;
 use super::UserClaims;
 
 const ISSUER: &str = "authority";

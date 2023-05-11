@@ -37,7 +37,7 @@ impl schemars::JsonSchema for ConfirmationCode {
         "registration confirmation code".to_owned()
     }
 
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
         use schemars::schema::InstanceType;
         use schemars::schema::StringValidation;
 

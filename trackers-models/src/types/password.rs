@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PasswordInput(std::string::String);
 
@@ -44,7 +46,8 @@ impl std::fmt::Display for InvalidPassword {
                 f,
                 "provided password is too short, required at least 8 characters"
             ),
-            InvalidPassword::MissingCharcter(missed) => write!(
+            InvalidPassword::MissingCharcter(missed) => 
+            write!(
                 f,
                 "missed characters from the following required character classes: {}",
                 missed

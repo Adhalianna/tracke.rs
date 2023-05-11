@@ -42,7 +42,7 @@ impl<T: serde::Serialize + schemars::JsonSchema> aide::OperationOutput for Resou
 
     fn inferred_responses(
         ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
+        _operation: &mut aide::openapi::Operation,
     ) -> Vec<(Option<u16>, aide::openapi::Response)> {
         let mut resp = aide::openapi::Response::default();
         resp.content = indexmap::indexmap! {
@@ -81,7 +81,7 @@ impl<T: serde::Serialize + schemars::JsonSchema> aide::OperationOutput for Creat
 
     fn inferred_responses(
         ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
+        _operation: &mut aide::openapi::Operation,
     ) -> Vec<(Option<u16>, aide::openapi::Response)> {
         let mut resp = aide::openapi::Response::default();
         resp.content = indexmap::indexmap! {
@@ -124,7 +124,7 @@ impl<T: serde::Serialize + schemars::JsonSchema> aide::OperationOutput for Modif
 
     fn inferred_responses(
         ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
+        _operation: &mut aide::openapi::Operation,
     ) -> Vec<(Option<u16>, aide::openapi::Response)> {
         let mut resp = aide::openapi::Response::default();
         resp.content = indexmap::indexmap! {
@@ -158,7 +158,7 @@ impl aide::OperationOutput for DeletedResource {
 
     fn inferred_responses(
         ctx: &mut aide::gen::GenContext,
-        operation: &mut aide::openapi::Operation,
+        _operation: &mut aide::openapi::Operation,
     ) -> Vec<(Option<u16>, aide::openapi::Response)> {
         let mut resp = aide::openapi::Response::default();
         resp.content = indexmap::indexmap! {

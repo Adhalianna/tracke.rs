@@ -1,5 +1,4 @@
 use super::*;
-use crate::prelude::*;
 
 #[derive(Debug, Serialize)]
 #[serde(from = "ApiError")]
