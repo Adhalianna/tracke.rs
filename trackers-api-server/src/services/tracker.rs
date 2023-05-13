@@ -128,25 +128,27 @@ async fn get_trackers_tasks(
         crate::auth::scope::UserIdScope,
         crate::auth::UserClaims,
     >,
+    query: Option<QsQuery<crate::query_param::TasksQuery>>,
     axum::extract::Path(the_tracker_id): axum::extract::Path<Base62Uuid>,
 ) -> Result<Resource<Vec<Task>>, ApiError> {
     let mut db_conn = state.db.get().await?;
 
-    use diesel::query_dsl::JoinOnDsl;
-
-    let trackers_tasks: Vec<db::Task> = db_schema::trackers::table
+    let mut tasks_query = db_schema::trackers::table
         .filter(
             db_schema::trackers::columns::tracker_id
                 .eq(the_tracker_id)
                 .and(db_schema::trackers::columns::user_id.eq(user_id.0)),
         )
-        .inner_join(
-            db_schema::tasks::table
-                .on(db_schema::tasks::tracker_id.eq(db_schema::trackers::tracker_id)),
-        )
+        .inner_join(db_schema::tasks::table)
         .select(db_schema::tasks::all_columns)
-        .load(&mut db_conn)
-        .await?;
+        .into_boxed();
+
+    if let Some(query) = query {
+        dbg!(&query);
+        tasks_query = tasks_query.filter(query.into_join_filters());
+    }
+
+    let trackers_tasks: Vec<db::Task> = tasks_query.load(&mut db_conn).await?;
 
     Ok(Resource::new({
         trackers_tasks.into_iter().map(|t| t.into()).collect()

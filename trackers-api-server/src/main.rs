@@ -4,6 +4,7 @@ pub mod json;
 pub mod prelude;
 pub mod response;
 pub mod services;
+pub mod query_param;
 
 use std::net::ToSocketAddrs;
 

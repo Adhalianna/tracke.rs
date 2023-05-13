@@ -17,7 +17,7 @@ tower-http = {version="^0.4", features=["cors"]}
 once_cell={version="^1.1"}
 tokio = { version = "^1", features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
-aide = {version = "^0.11", features = ["macros", "axum", "redoc"]}
+aide = {version = "^0.11", features = ["macros", "axum", "redoc", "serde_qs"]}
 aliri= {version="^0.6"}
 aliri_axum={version="^0.2"}
 aliri_tower={version="^0.4"}
@@ -44,3 +44,6 @@ deadpool = { version = "^0.9", features = ["managed"] }
 dotenvy = { workspace = true, optional = true }
 indexmap = {version = "^1.9"}
 reqwest = "0.11.17"
+serde_qs = {version = "^0.12", features = ["axum"]}
+serde_regex = {version = "^1.1"}
+regex = {version = "^1.8"}

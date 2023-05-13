@@ -33,12 +33,14 @@ pub use axum::{
     Json,
 };
 pub use diesel::{
-    AsChangeset, BoolExpressionMethods, ExpressionMethods, Identifiable, Insertable, QueryDsl,
-    Queryable,
+    AsChangeset, BoolExpressionMethods, ExpressionMethods, Identifiable, Insertable,
+    PgArrayExpressionMethods, PgTextExpressionMethods, QueryDsl, Queryable,
 };
 pub use diesel_async::{AsyncConnection, RunQueryDsl, SaveChangesDsl};
+pub use qs::axum::QsQuery;
 pub use schemars::JsonSchema;
 pub use serde::{Deserialize, Serialize};
+pub use serde_qs as qs;
 pub use std::{
     fmt::{Debug, Display},
     net::SocketAddr,
