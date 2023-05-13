@@ -13,6 +13,13 @@ pub fn router() -> ApiRouter<AppState> {
                 ),
             |op| op.tag("Task Management"),
         )
+        .api_route_with(
+            "/user/:email/tasks",
+            routing::get(get_all_user_tasks).layer(
+                crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()),
+            ),
+            |op| op.tag("Task Management"),
+        )
         .api_route_with("/users", routing::post(start_user_registaration), |op| {
             op.tag("Registration")
         })
@@ -238,4 +245,33 @@ async fn post_to_users_trackers(
         location: format!("/api/tracker/{}", &inserted.tracker_id),
         resource: Resource::new(inserted),
     })
+}
+
+async fn get_all_user_tasks(
+    State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
+    query: Option<QsQuery<crate::query_param::TasksQuery>>,
+    axum::extract::Path(email): axum::extract::Path<EmailAddress>,
+) -> Result<Resource<Vec<models::core::task::Task>>, ApiError> {
+    let mut db_conn = state.db.get().await?;
+
+    let mut tasks_query = db_schema::trackers::table
+        .filter(db_schema::trackers::columns::user_id.eq(user_id.0))
+        .inner_join(db_schema::tasks::table)
+        .select(db_schema::tasks::all_columns)
+        .into_boxed();
+
+    if let Some(query) = query {
+        dbg!(&query);
+        tasks_query = tasks_query.filter(query.into_join_filters());
+    }
+
+    let trackers_tasks: Vec<models::db::Task> = tasks_query.load(&mut db_conn).await?;
+
+    Ok(Resource::new({
+        trackers_tasks.into_iter().map(|t| t.into()).collect()
+    }))
 }
