@@ -53,13 +53,14 @@ impl From<crate::db::Task> for Task {
 /// Input values for the [Task] model.
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Clone)]
 pub struct TaskInput {
+    #[serde(default)]
     pub task_id: Option<crate::types::Uuid>,
     pub tracker_id: crate::types::Uuid,
     pub title: crate::types::String<256>,
     #[serde(default)]
     pub checkmarked: bool,
     #[serde(default)]
-    pub completed_at: Option<chrono::DateTime<chrono::offset::Utc>>,
+    pub checkmarked_at: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
     pub description: Option<crate::types::String<4096>>,
     #[serde(default)]
@@ -70,4 +71,56 @@ pub struct TaskInput {
     pub hard_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
     pub tags: Option<crate::types::Tags>,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct TaskPatch {
+    #[serde(default)]
+    pub task_id: Option<crate::types::Uuid>,
+    #[serde(default)]
+    pub tracker_id: Option<crate::types::Uuid>,
+    #[serde(default)]
+    pub title: Option<crate::types::String<256>>,
+    #[serde(default)]
+    pub checkmarked: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub checkmarked_at: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub description: Option<Option<crate::types::String<4096>>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub time_estimate: Option<Option<crate::types::Duration>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub soft_deadline: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub hard_deadline: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub tags: Option<Option<crate::types::Tags>>,
+}
+
+// Any value that is present is considered Some value, including null.
+fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: serde::Deserialize<'de>,
+    D: serde::Deserializer<'de>,
+{
+    serde::Deserialize::deserialize(deserializer).map(Some)
+}
+
+impl schemars::JsonSchema for TaskPatch {
+    fn schema_name() -> String {
+        "task patch".into()
+    }
+
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        let mut schema = gen.subschema_for::<TaskInput>();
+        match &mut schema {
+            schemars::schema::Schema::Object(obj) => {
+                if let Some(obj) = obj.object.as_mut() {
+                    obj.required = std::collections::BTreeSet::new();
+                }
+            }
+            _ => {}
+        }
+        schema
+    }
 }
