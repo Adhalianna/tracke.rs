@@ -58,6 +58,7 @@ async fn confirm_request(
         .transaction(|tx| {
             async move {
                 use db_schema::registration_requests::dsl::registration_requests;
+                use db_schema::trackers::dsl::trackers;
                 use db_schema::users::dsl::users;
 
                 let req: models::db::RegistrationRequest =
@@ -106,9 +107,11 @@ async fn confirm_request(
                 let mut updated_req: models::RegistrationRequest = req.clone().into();
                 updated_req.confirmed_with_code = true;
 
+                let new_user_id = models::types::Uuid::new();
+
                 match diesel::insert_into(users)
                     .values(models::db::User {
-                        user_id: models::types::Uuid::new(),
+                        user_id: new_user_id.clone(),
                         email: req.email,
                         password: req.password,
                     })
@@ -118,6 +121,18 @@ async fn confirm_request(
                     Err(err) => {
                         return Err(err);
                     }
+                    _ => {}
+                };
+
+                match diesel::insert_into(trackers)
+                    .values(models::core::Tracker {
+                        user_id: new_user_id,
+                        ..Default::default()
+                    })
+                    .execute(tx)
+                    .await
+                {
+                    Err(err) => return Err(err),
                     _ => {}
                 };
 

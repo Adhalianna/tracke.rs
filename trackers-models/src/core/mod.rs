@@ -16,5 +16,3 @@ pub mod confirmation_code;
 pub use confirmation_code::*;
 pub mod session;
 pub use session::*;
-pub mod user_id;
-pub use user_id::*;

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use models::{RegistrationRequest, Tracker, TrackerInput, UserCreation};
+use models::{RegistrationRequest, TaskInput, Tracker, TrackerInput, UserCreation};
 
 pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
@@ -15,9 +15,12 @@ pub fn router() -> ApiRouter<AppState> {
         )
         .api_route_with(
             "/user/:email/tasks",
-            routing::get(get_all_user_tasks).layer(
-                crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()),
-            ),
+            routing::get(get_all_user_tasks)
+                .post(add_to_the_default_or_selected_tracker)
+                .layer(
+                    crate::auth::layer::authorizer()
+                        .jwt_layer(crate::auth::layer::authority().clone()),
+                ),
             |op| op.tag("Task Management"),
         )
         .api_route_with("/users", routing::post(start_user_registaration), |op| {
@@ -236,7 +239,7 @@ async fn post_to_users_trackers(
             tracker_id: new_tracker_id,
             user_id: user_id.0,
             name: input.name,
-            is_default: false,
+            is_default: false.into(),
         })
         .get_result(&mut db_conn)
         .await?;
@@ -254,7 +257,7 @@ async fn get_all_user_tasks(
         crate::auth::UserClaims,
     >,
     query: Option<QsQuery<crate::query_param::TasksQuery>>,
-    axum::extract::Path(email): axum::extract::Path<EmailAddress>,
+    axum::extract::Path(_email): axum::extract::Path<EmailAddress>, // TODO: use the param somehow
 ) -> Result<Resource<Vec<models::core::task::Task>>, ApiError> {
     let mut db_conn = state.db.get().await?;
 
@@ -274,4 +277,101 @@ async fn get_all_user_tasks(
     Ok(Resource::new({
         trackers_tasks.into_iter().map(|t| t.into()).collect()
     }))
+}
+
+async fn add_to_the_default_or_selected_tracker(
+    State(state): State<AppState>,
+    crate::auth::VariableScope(user_id): crate::auth::VariableScope<
+        crate::auth::scope::UserIdScope,
+        crate::auth::UserClaims,
+    >,
+    axum::extract::Path(_email): axum::extract::Path<EmailAddress>,
+    json: JsonExtract<TaskInput>,
+) -> Result<CreatedResource<models::core::task::Task>, ApiError> {
+    let mut db_conn = state.db.get().await?;
+    let input = json.extract();
+
+    if let Some(selected_tracker_id) = &input.tracker_id {
+        let owned_results = db_schema::trackers::table
+            .filter(
+                db_schema::trackers::user_id
+                    .eq(&user_id.0)
+                    .and(db_schema::trackers::tracker_id.eq(selected_tracker_id)),
+            )
+            .execute(&mut db_conn)
+            .await?;
+        if owned_results < 1 {
+            Err(ForbiddenError::default().with_msg("no access to the selected tracker"))?;
+        }
+
+        let new_task_id = input.task_id.unwrap_or(models::types::Uuid::new());
+
+        let inserted: models::db::Task = diesel::insert_into(db_schema::tasks::table)
+            .values(models::db::Task {
+                task_id: new_task_id.clone(),
+                tracker_id: selected_tracker_id.clone(),
+                completed_at: {
+                    match (input.checkmarked, input.checkmarked_at) {
+                        (false, None) => None,
+                        (true, Some(c_at)) => Some(c_at),
+                        (true, None) => Some(chrono::Utc::now()),
+                        (false, Some(_)) => None,
+                    }
+                },
+                title: input.title,
+                description: input.description,
+                time_estimate: input.time_estimate,
+                soft_deadline: input.soft_deadline,
+                hard_deadline: input.hard_deadline,
+                tags: input.tags,
+            })
+            .returning(db_schema::tasks::all_columns)
+            .get_result(&mut db_conn)
+            .await?;
+
+        Ok(CreatedResource {
+            location: format!("/api/task/{new_task_id}"),
+            resource: Resource::new(inserted.into()),
+        })
+    } else {
+        let default_tracker_id: models::types::Uuid = db_schema::trackers::table
+            .filter(
+                db_schema::trackers::user_id
+                    .eq(user_id.0)
+                    .and(db_schema::trackers::is_default.eq(true)),
+            )
+            .select(db_schema::trackers::tracker_id)
+            .first(&mut db_conn)
+            .await?;
+
+        let new_task_id = input.task_id.unwrap_or(models::types::Uuid::new());
+
+        let inserted: models::db::Task = diesel::insert_into(db_schema::tasks::table)
+            .values(models::db::Task {
+                task_id: new_task_id.clone(),
+                tracker_id: default_tracker_id,
+                completed_at: {
+                    match (input.checkmarked, input.checkmarked_at) {
+                        (false, None) => None,
+                        (true, Some(c_at)) => Some(c_at),
+                        (true, None) => Some(chrono::Utc::now()),
+                        (false, Some(_)) => None,
+                    }
+                },
+                title: input.title,
+                description: input.description,
+                time_estimate: input.time_estimate,
+                soft_deadline: input.soft_deadline,
+                hard_deadline: input.hard_deadline,
+                tags: input.tags,
+            })
+            .returning(db_schema::tasks::all_columns)
+            .get_result(&mut db_conn)
+            .await?;
+
+        Ok(CreatedResource {
+            location: format!("/api/task/{new_task_id}"),
+            resource: Resource::new(inserted.into()),
+        })
+    }
 }

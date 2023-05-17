@@ -20,3 +20,5 @@ pub mod email;
 pub use email::Email;
 pub mod password;
 pub use password::PasswordInput;
+pub mod null_or_true;
+pub use null_or_true::NullOrTrue;

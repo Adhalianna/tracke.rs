@@ -55,7 +55,8 @@ impl From<crate::db::Task> for Task {
 pub struct TaskInput {
     #[serde(default)]
     pub task_id: Option<crate::types::Uuid>,
-    pub tracker_id: crate::types::Uuid,
+    #[serde(default)]
+    pub tracker_id: Option<crate::types::Uuid>,
     pub title: crate::types::String<256>,
     #[serde(default)]
     pub checkmarked: bool,

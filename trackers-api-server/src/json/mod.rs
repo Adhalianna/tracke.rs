@@ -12,6 +12,7 @@ pub struct JsonExtract<T: DeserializeOwned, R: FromJsonRejection = ApiJsonReject
 }
 
 impl<T: DeserializeOwned, R: FromJsonRejection> JsonExtract<T, R> {
+    #[inline]
     pub fn extract(self) -> T {
         self.data
     }

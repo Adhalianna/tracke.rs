@@ -30,7 +30,8 @@ CREATE TABLE trackers(
   tracker_id uuid not null primary key,
   user_id uuid not null references users,
   name varchar(255) not null,
-  is_default bool not null default false
+  is_default bool null default null,
+  UNIQUE NULLS DISTINCT (user_id, is_default)  --this is important property which will be used to assert there's a single default for each user
 );
 CREATE INDEX trackers_tracker_id_idx ON trackers USING HASH (tracker_id);
 CREATE INDEX trackers_user_id_idx ON trackers USING HASH (user_id);

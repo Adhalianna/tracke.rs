@@ -39,7 +39,7 @@ diesel::table! {
         tracker_id -> Uuid,
         user_id -> Uuid,
         name -> Varchar,
-        is_default -> Bool,
+        is_default -> Nullable<Bool>,
     }
 }
 
