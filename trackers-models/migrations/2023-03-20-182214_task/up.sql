@@ -51,7 +51,7 @@ CREATE TABLE tasks(
   soft_deadline timestamp with time zone null,
   hard_deadline timestamp with time zone null,
   tags text[] null,
-  list list_item_t[] null default null
+  list list_item_t[] null default null check (cardinality(list)>0 AND array_length(list, 1) < 128 AND null != ANY(list))
 );
 
 CREATE INDEX tasks_task_id_idx ON tasks (task_id); -- B-Tree, uuid7 is sortable and we want to use it to paginate
