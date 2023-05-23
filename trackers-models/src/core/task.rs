@@ -30,6 +30,8 @@ pub struct Task {
     /// different task trackers.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub tags: Option<crate::types::Tags>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub list: Option<crate::types::ListItems>,
 }
 
 #[cfg(feature = "diesel")]
@@ -46,6 +48,7 @@ impl From<crate::db::Task> for Task {
             soft_deadline: t.soft_deadline,
             hard_deadline: t.hard_deadline,
             tags: t.tags,
+            list: t.list,
         }
     }
 }
@@ -72,6 +75,8 @@ pub struct TaskInput {
     pub hard_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     #[serde(default)]
     pub tags: Option<crate::types::Tags>,
+    #[serde(default)]
+    pub list: Option<crate::types::ListItems>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -96,6 +101,8 @@ pub struct TaskPatch {
     pub hard_deadline: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     pub tags: Option<Option<crate::types::Tags>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub list: Option<crate::types::ListItems>,
 }
 
 // Any value that is present is considered Some value, including null.

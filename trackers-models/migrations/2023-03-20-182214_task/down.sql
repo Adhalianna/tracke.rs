@@ -19,3 +19,5 @@ DROP TABLE trackers;
 DROP TABLE registration_requests;
 DROP TABLE sessions;
 DROP TABLE users;
+
+DROP TYPE list_item_t;

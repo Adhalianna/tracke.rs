@@ -324,6 +324,7 @@ async fn add_to_the_default_or_selected_tracker(
                 soft_deadline: input.soft_deadline,
                 hard_deadline: input.hard_deadline,
                 tags: input.tags,
+                list: input.list,
             })
             .returning(db_schema::tasks::all_columns)
             .get_result(&mut db_conn)
@@ -364,6 +365,7 @@ async fn add_to_the_default_or_selected_tracker(
                 soft_deadline: input.soft_deadline,
                 hard_deadline: input.hard_deadline,
                 tags: input.tags,
+                list: input.list,
             })
             .returning(db_schema::tasks::all_columns)
             .get_result(&mut db_conn)

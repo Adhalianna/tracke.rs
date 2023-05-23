@@ -25,6 +25,7 @@ pub struct Task {
     pub soft_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     pub hard_deadline: Option<chrono::DateTime<chrono::offset::Utc>>,
     pub tags: Option<crate::types::Tags>,
+    pub list: Option<crate::types::ListItems>,
 }
 
 #[derive(
@@ -58,6 +59,8 @@ pub struct TaskPatch {
     pub hard_deadline: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
     #[serde(default)]
     pub tags: Option<Option<crate::types::Tags>>,
+    #[serde(default)]
+    pub list: Option<crate::types::ListItems>,
 }
 
 impl From<crate::core::TaskPatch> for TaskPatch {
@@ -87,6 +90,7 @@ impl From<crate::core::TaskPatch> for TaskPatch {
             soft_deadline: t.soft_deadline,
             hard_deadline: t.hard_deadline,
             tags: t.tags,
+            list: t.list.and_then(|list| Some(list.into())),
         }
     }
 }

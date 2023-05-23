@@ -301,6 +301,7 @@ async fn post_to_tracker_a_task(
             soft_deadline: input.soft_deadline,
             hard_deadline: input.hard_deadline,
             tags: input.tags,
+            list: input.list,
         })
         .execute(&mut db_conn)
         .await?;

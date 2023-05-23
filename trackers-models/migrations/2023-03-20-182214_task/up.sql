@@ -36,6 +36,11 @@ CREATE TABLE trackers(
 CREATE INDEX trackers_tracker_id_idx ON trackers USING HASH (tracker_id);
 CREATE INDEX trackers_user_id_idx ON trackers USING HASH (user_id);
 
+CREATE TYPE list_item_t AS (
+  item_content text,
+  is_completed bool
+);
+
 CREATE TABLE tasks(
   task_id uuid not null primary key,
   tracker_id uuid not null references trackers,
@@ -45,7 +50,9 @@ CREATE TABLE tasks(
   time_estimate bigint null, -- storing the number of seconds
   soft_deadline timestamp with time zone null,
   hard_deadline timestamp with time zone null,
-  tags text[] null
+  tags text[] null,
+  list list_item_t[] null default null
 );
+
 CREATE INDEX tasks_task_id_idx ON tasks (task_id); -- B-Tree, uuid7 is sortable and we want to use it to paginate
 CREATE INDEX tasks_tracker_id_idx ON tasks USING HASH (tracker_id);

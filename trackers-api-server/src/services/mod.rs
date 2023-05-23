@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+pub mod list;
 pub mod registration;
 pub mod session;
 pub mod task;

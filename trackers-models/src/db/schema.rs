@@ -1,5 +1,11 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "list_item_t"))]
+    pub struct ListItemT;
+}
+
 diesel::table! {
     registration_requests (email) {
         email -> Varchar,
@@ -21,6 +27,9 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ListItemT;
+
     tasks (task_id) {
         task_id -> Uuid,
         tracker_id -> Uuid,
@@ -31,6 +40,7 @@ diesel::table! {
         soft_deadline -> Nullable<Timestamptz>,
         hard_deadline -> Nullable<Timestamptz>,
         tags -> Nullable<Array<Nullable<Text>>>,
+        list -> Nullable<Array<Nullable<ListItemT>>>,
     }
 }
 
