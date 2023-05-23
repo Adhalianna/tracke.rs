@@ -18,6 +18,7 @@ pub fn app_services() -> axum::Router<crate::AppState> {
             .merge(tracker::router())
             .merge(user::router())
             .merge(registration::router())
+            .merge(list::router())
             .merge(session::router()),
     );
 
