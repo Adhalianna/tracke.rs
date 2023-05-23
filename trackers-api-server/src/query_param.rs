@@ -35,6 +35,12 @@ pub struct TasksQuery {
     pub regex: Option<RegexStr>,
 }
 
+impl TasksQuery {
+    pub fn is_empty(&self) -> bool {
+        self.checkmarked.is_none() && self.tags.is_none() && self.title.is_none() && self.regex.is_none()
+    }
+}
+
 #[derive(Deserialize, Debug, Clone, diesel::expression::AsExpression,diesel::deserialize::FromSqlRow)]
 #[serde(transparent)]
 #[diesel(sql_type = diesel::sql_types::Text)]

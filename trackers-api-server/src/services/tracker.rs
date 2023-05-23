@@ -238,7 +238,9 @@ async fn get_trackers_tasks(
         .into_boxed();
 
     if let Some(query) = query {
-        tasks_query = tasks_query.filter(query.into_join_filters());
+        if !query.is_empty() {
+            tasks_query = tasks_query.filter(query.into_join_filters());
+        }
     }
 
     let trackers_tasks: Vec<db::Task> = tasks_query.load(&mut db_conn).await?;

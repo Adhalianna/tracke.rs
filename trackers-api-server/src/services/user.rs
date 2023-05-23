@@ -268,8 +268,9 @@ async fn get_all_user_tasks(
         .into_boxed();
 
     if let Some(query) = query {
-        dbg!(&query);
-        tasks_query = tasks_query.filter(query.into_join_filters());
+        if !query.is_empty() {
+            tasks_query = tasks_query.filter(query.into_join_filters());
+        }
     }
 
     let trackers_tasks: Vec<models::db::Task> = tasks_query.load(&mut db_conn).await?;
