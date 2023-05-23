@@ -3,6 +3,7 @@ use std::collections::HashMap;
 #[derive(serde::Serialize, schemars::JsonSchema)]
 pub struct Resource<T> {
     pub data: T,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub links: HashMap<&'static str, String>,
 }
 
@@ -144,6 +145,7 @@ impl<T: serde::Serialize + schemars::JsonSchema> aide::OperationOutput for Modif
 
 #[derive(schemars::JsonSchema, Default, serde::Serialize)]
 pub struct DeletedResource {
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub links: HashMap<&'static str, String>,
 }
 

@@ -46,11 +46,23 @@ async fn get_one_task(
 
     let resource: Resource<Task> = Resource::new(the_task.into());
 
+    // add appropiate links
+    let mut links = Vec::new();
     if resource.data.checkmarked {
-        Ok(resource.with_links([("unmark", format!("/api/task/{}/checkmark", task_id))]))
+        links.push(("unmark", format!("/api/task/{task_id}/checkmark")));
     } else {
-        Ok(resource.with_links([("checkmark", format!("/api/task/{}/checkmark", task_id))]))
+        links.push(("checkmark", format!("/api/task/{task_id}/checkmark")))
     }
+    if resource.data.list.is_some() {
+        links.extend([
+            ("replace list", format!("/api/task/{task_id}/list")),
+            ("delete list", format!("/api/task/{task_id}/list")),
+        ])
+    } else {
+        links.push(("attach list", format!("/api/task/{task_id}/list")))
+    }
+
+    Ok(resource.with_links(links))
 }
 
 async fn patch_task(

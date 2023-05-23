@@ -27,7 +27,7 @@ async fn get_just_list(
 
     let (list, task_user_id) = db_schema::tasks::table
         .inner_join(db_schema::trackers::table)
-        .filter(db_schema::tasks::task_id.eq(task_id))
+        .filter(db_schema::tasks::task_id.eq(&task_id))
         .select((db_schema::tasks::list, db_schema::trackers::user_id))
         .first::<(Option<models::types::ListItems>, models::types::Uuid)>(&mut db_conn)
         .await?;
@@ -47,6 +47,10 @@ async fn get_just_list(
         None => Err(NotFoundError::default()
             .with_docs()
             .with_msg("no list found for selected task")
+            .with_links([
+                ("create", format!("/api/task/{task_id}/list")),
+                ("task", format!("/api/task/{task_id}")),
+            ])
             .into()),
     }
 }
@@ -81,8 +85,8 @@ async fn add_list(
         Err(ConflictError::default()
             .with_msg("list already present")
             .with_links([
-                ("put", format!("/task/{task_id}/list")),
-                ("delete", format!("/task/{task_id}/list")),
+                ("put", format!("/api/task/{task_id}/list")),
+                ("delete", format!("/api/task/{task_id}/list")),
             ])
             .with_docs())?;
     }
@@ -95,7 +99,7 @@ async fn add_list(
         .await?;
 
     Ok(CreatedResource {
-        location: format!("/task/{task_id}/list"),
+        location: format!("/api/task/{task_id}/list"),
         resource: Resource::new(new_list),
     })
 }
