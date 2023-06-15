@@ -21,8 +21,11 @@ impl diesel::serialize::ToSql<diesel::sql_types::BigInt, diesel::pg::Pg> for Dur
         &'b self,
         out: &mut diesel::serialize::Output<'b, '_, diesel::pg::Pg>,
     ) -> diesel::serialize::Result {
-        use std::io::Write;
-        out.write_fmt(format_args!("{}", self.0.num_seconds()))?;
+        let duration = self.0.num_seconds();
+        <i64 as diesel::serialize::ToSql<diesel::sql_types::BigInt, _>>::to_sql(
+            &duration,
+            &mut out.reborrow(),
+        )?;
         Ok(diesel::serialize::IsNull::No)
     }
 }
