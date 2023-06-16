@@ -34,7 +34,7 @@ impl IntoResponse for ServerError {
             #[cfg(not(debug_assertions))]
             {
                 Json(super::ApiError {
-                    code: 500,
+                    status: 500,
                     msg: format!("An internal server error has occured!"),
                     links: None,
                 })

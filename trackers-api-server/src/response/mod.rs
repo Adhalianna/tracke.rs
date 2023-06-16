@@ -112,7 +112,7 @@ impl<T: serde::Serialize> axum::response::IntoResponse for ModifiedResource<T> {
             headers.insert(axum::http::header::LOCATION, loc.parse().unwrap());
         }
         (
-            axum::http::StatusCode::CREATED,
+            axum::http::StatusCode::OK,
             headers,
             axum::Json(self.resource),
         )
