@@ -16,3 +16,5 @@ pub mod confirmation_code;
 pub use confirmation_code::*;
 pub mod session;
 pub use session::*;
+pub mod client_credentials;
+pub use client_credentials::*;

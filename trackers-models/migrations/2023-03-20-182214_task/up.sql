@@ -30,7 +30,7 @@ CREATE INDEX sessions_access_token_idx ON sessions USING HASH (access_token);
 CREATE TABLE trackers(
   tracker_id uuid not null primary key,
   user_id uuid not null references users,
-  name varchar(255) not null,
+  name varchar(256) not null,
   is_default bool null default null,
   UNIQUE NULLS DISTINCT (user_id, is_default)  --this is important property which will be used to assert there's a single default for each user
 );
@@ -46,7 +46,7 @@ CREATE TABLE tasks(
   task_id uuid not null primary key,
   tracker_id uuid not null references trackers,
   completed_at timestamp with time zone null,
-  title varchar(255) not null,
+  title varchar(256) not null,
   description text null,
   time_estimate bigint null, -- storing the number of seconds
   soft_deadline timestamp with time zone null,
@@ -57,3 +57,11 @@ CREATE TABLE tasks(
 
 CREATE INDEX tasks_task_id_idx ON tasks (task_id); -- B-Tree, uuid7 is sortable and we want to use it to paginate
 CREATE INDEX tasks_tracker_id_idx ON tasks USING HASH (tracker_id);
+
+CREATE TABLE authorised_clients(
+  user_id uuid not null primary key,
+  name varchar(256) not null,
+  website varchar null,
+  client_id varchar not null unique,
+  client_secret varchar not null unique,
+)
