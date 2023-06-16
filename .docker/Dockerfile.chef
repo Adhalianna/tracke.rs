@@ -1,6 +1,6 @@
 FROM rust:slim as trackers-chef
 RUN apt-get update \
-    && apt-get install --no-install-recommends lld clang -y \
+    && apt-get install --no-install-recommends lld clang pkg-config libssl-dev -y \
     && cargo install cargo-chef --locked --no-track \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
