@@ -45,17 +45,7 @@ impl diesel::deserialize::FromSql<crate::db::schema::sql_types::ListItemT, diese
     }
 }
 
-#[derive(
-    Debug,
-    Default,
-    Clone,
-    PartialEq,
-    Eq,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-    schemars::JsonSchema,
-)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "diesel",
     derive(diesel::deserialize::FromSqlRow, diesel::expression::AsExpression)
@@ -63,6 +53,13 @@ impl diesel::deserialize::FromSql<crate::db::schema::sql_types::ListItemT, diese
 #[cfg_attr(feature = "diesel", diesel(sql_type=diesel::sql_types::Array<diesel::sql_types::Nullable<crate::db::schema::sql_types::ListItemT>>))]
 #[cfg_attr(feature = "diesel", diesel(sql_type=diesel::sql_types::Array<crate::db::schema::sql_types::ListItemT>))]
 pub struct ListItems(pub Vec<ListItem>);
+
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+struct ListItemSer {
+    pub idx: usize,
+    pub item_content: String,
+    pub is_completed: bool,
+}
 
 impl From<Vec<ListItem>> for ListItems {
     fn from(value: Vec<ListItem>) -> Self {
@@ -73,6 +70,83 @@ impl From<Vec<ListItem>> for ListItems {
 impl From<ListItems> for Vec<ListItem> {
     fn from(value: ListItems) -> Self {
         value.0
+    }
+}
+
+impl serde::Serialize for ListItems {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeSeq;
+
+        let mut seq_ser = serializer.serialize_seq(Some(self.0.len()))?;
+        let res: Result<Vec<_>, S::Error> = self
+            .0
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| (idx + 1, item))
+            .map(|(idx, item)| {
+                seq_ser.serialize_element(&ListItemSer {
+                    idx,
+                    is_completed: item.is_completed,
+                    item_content: item.item_content.clone(),
+                })
+            })
+            .collect();
+        res?;
+        seq_ser.end()
+    }
+}
+
+struct ItemsListVisitor;
+
+impl<'de> serde::de::Visitor<'de> for ItemsListVisitor {
+    type Value = ListItems;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("an array of list items")
+    }
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        let mut tmp_store = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+
+        while let Some(item) = seq.next_element::<ListItemSer>()? {
+            tmp_store.push((
+                item.idx,
+                ListItem {
+                    item_content: item.item_content,
+                    is_completed: item.is_completed,
+                },
+            ));
+        }
+
+        tmp_store.sort_by(|(idx1, _), (idx2, _)| idx1.cmp(idx2));
+
+        Ok(ListItems(
+            tmp_store.into_iter().map(|(_, item)| item).collect(),
+        ))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ListItems {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(ItemsListVisitor)
+    }
+}
+
+impl schemars::JsonSchema for ListItems {
+    fn schema_name() -> String {
+        String::from("list items")
+    }
+
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        gen.subschema_for::<ListItemSer>()
     }
 }
 

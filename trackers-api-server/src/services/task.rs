@@ -100,8 +100,8 @@ async fn patch_task(
     }
 
     let updated: models::db::Task = diesel::update(db_schema::tasks::table)
-        .set(models::db::TaskPatch::from(patch))
-        .returning(db_schema::tasks::all_columns)
+        .filter(db_schema::tasks::task_id.eq(task_id))
+        .set(models::db::TaskPatch::from(dbg!(patch)))
         .get_result(&mut db_conn)
         .await?;
 

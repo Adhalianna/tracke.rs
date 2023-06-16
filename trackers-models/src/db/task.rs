@@ -35,20 +35,18 @@ pub struct Task {
     Clone,
     diesel::Queryable,
     diesel::Insertable,
-    diesel::Associations,
     diesel::AsChangeset,
 )]
 #[diesel(table_name = crate::db::schema::tasks)]
-#[diesel(belongs_to(crate::core::Tracker, foreign_key = tracker_id))]
 pub struct TaskPatch {
     #[serde(default)]
     pub task_id: Option<crate::types::Uuid>,
     #[serde(default)]
     pub tracker_id: Option<crate::types::Uuid>,
     #[serde(default)]
-    pub title: Option<crate::types::String<256>>,
-    #[serde(default)]
     pub completed_at: Option<Option<chrono::DateTime<chrono::offset::Utc>>>,
+    #[serde(default)]
+    pub title: Option<crate::types::String<256>>,
     #[serde(default)]
     pub description: Option<Option<crate::types::String<4096>>>,
     #[serde(default)]

@@ -12,8 +12,13 @@ pub fn router() -> ApiRouter<AppState> {
                 .delete(delete_list),
             |op| op.tag("Task Management"),
         )
+        // .api_route_with("/task/:task_id/list/:idx", routing::get(handler), |op| {
+        //     op.tag("Task Management")
+        // })
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
 }
+
+// async fn get_list_item()
 
 async fn get_just_list(
     State(state): State<AppState>,
