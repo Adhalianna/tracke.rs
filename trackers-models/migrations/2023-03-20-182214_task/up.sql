@@ -1,4 +1,5 @@
 -- Your SQL goes here
+
 CREATE TABLE users(
   user_id uuid not null primary key,
   email varchar(320) not null unique,

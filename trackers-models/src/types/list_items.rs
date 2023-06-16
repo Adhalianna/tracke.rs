@@ -58,7 +58,7 @@ pub struct ListItems(pub Vec<ListItem>);
 struct ListItemSer {
     pub idx: usize,
     pub item_content: String,
-    pub is_completed: bool,
+    pub checkmarked: bool,
 }
 
 impl From<Vec<ListItem>> for ListItems {
@@ -89,7 +89,7 @@ impl serde::Serialize for ListItems {
             .map(|(idx, item)| {
                 seq_ser.serialize_element(&ListItemSer {
                     idx,
-                    is_completed: item.is_completed,
+                    checkmarked: item.is_completed,
                     item_content: item.item_content.clone(),
                 })
             })
@@ -118,7 +118,7 @@ impl<'de> serde::de::Visitor<'de> for ItemsListVisitor {
                 item.idx,
                 ListItem {
                     item_content: item.item_content,
-                    is_completed: item.is_completed,
+                    is_completed: item.checkmarked,
                 },
             ));
         }

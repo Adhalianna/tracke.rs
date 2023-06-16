@@ -37,6 +37,12 @@ impl From<uuid::Uuid> for Uuid {
     }
 }
 
+impl Into<uuid::Uuid> for Uuid {
+    fn into(self) -> uuid::Uuid {
+        self.0
+    }
+}
+
 impl schemars::JsonSchema for Uuid {
     fn schema_name() -> std::string::String {
         "base62-encoded uuid".to_owned()

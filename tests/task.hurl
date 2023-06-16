@@ -54,17 +54,17 @@ Authorization: bearer {{token}}
       {
         "idx": 3,
         "item_content": "encryption algorithms",
-        "is_completed": false
+        "checkmarked": false
       },
       {
         "idx": 2,
         "item_content": "protecting applications",
-        "is_completed": false
+        "checkmarked": false
       },
       {
         "idx": 1,
         "item_content": "sql injections",
-        "is_completed": true
+        "checkmarked": true
       }
     ]
 }
@@ -74,3 +74,7 @@ HTTP 201
 jsonpath "$.data.list[0].idx" == 1
 jsonpath "$.data.list[0].item_content" == "sql injections"
 
+DELETE http://0.0.0.0:4000/api/task/4/checkmark
+Authorization: bearer {{token}}
+
+HTTP 200
