@@ -7,6 +7,16 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    authorised_clients (client_id) {
+        user_id -> Uuid,
+        name -> Varchar,
+        website -> Varchar,
+        client_id -> Varchar,
+        client_secret -> Varchar,
+    }
+}
+
+diesel::table! {
     registration_requests (email) {
         email -> Varchar,
         issued_at -> Timestamptz,
@@ -20,7 +30,7 @@ diesel::table! {
     sessions (access_token) {
         user_id -> Uuid,
         access_token -> Varchar,
-        refresh_token -> Varchar,
+        refresh_token -> Nullable<Varchar>,
         started_at -> Timestamptz,
         valid_until -> Timestamptz,
     }
@@ -61,11 +71,13 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(authorised_clients -> users (user_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(tasks -> trackers (tracker_id));
 diesel::joinable!(trackers -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    authorised_clients,
     registration_requests,
     sessions,
     tasks,

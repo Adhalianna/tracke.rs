@@ -20,7 +20,7 @@ CREATE INDEX registration_requests_email_idx ON registration_requests USING HASH
 CREATE TABLE sessions(
   user_id uuid not null references users,
   access_token varchar(1024) not null primary key default null,
-  refresh_token varchar(1024) not null default null,
+  refresh_token varchar(1024) null default null,
   started_at timestamp with time zone not null default now(),
   valid_until timestamp with time zone not null default now() + interval '30 minutes'
 );
@@ -59,9 +59,9 @@ CREATE INDEX tasks_task_id_idx ON tasks (task_id); -- B-Tree, uuid7 is sortable 
 CREATE INDEX tasks_tracker_id_idx ON tasks USING HASH (tracker_id);
 
 CREATE TABLE authorised_clients(
-  user_id uuid not null primary key,
+  user_id uuid not null references users,
   name varchar(256) not null,
-  website varchar null,
-  client_id varchar not null unique,
-  client_secret varchar not null unique,
-)
+  website varchar not null,
+  client_id varchar not null primary key,
+  client_secret varchar not null unique
+);

@@ -7,6 +7,10 @@ pub struct ConfirmationCode(std::string::String);
 
 impl ConfirmationCode {
     pub fn new() -> Self {
+        // Using non-cryptographically random string here is fine since the attacker
+        // would not gain much from finding out someone's confirmation code. They would
+        // prevent the hacked person from owning the account with their mail but as it
+        // would be a fresh account no sensitive information would be available.
         Self(random_string::generate(
             9,
             "1234567890ABCDEFGHIJKLMNOPRSTUWXYZ@#$%&",

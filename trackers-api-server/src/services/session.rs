@@ -22,6 +22,7 @@ pub fn router() -> ApiRouter<AppState> {
 pub enum AuthReq {
     Password(PasswordGrant),
     Refresh(RefreshRequest),
+    ClientCredentials(ClientCredentialsGrant),
 }
 
 /// OAuth2 authentication request for a resource owner authentication flow.
@@ -39,6 +40,14 @@ pub struct RefreshRequest {
     pub refresh_token: String,
 }
 
+/// OAuth2 client credentials request.
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename = "client_credentials")]
+pub struct ClientCredentialsGrant {
+    pub client_id: models::types::ClientSecretStr,
+    pub client_secret: models::types::ClientSecretStr,
+}
+
 /// OAuth2 access token which also works as session ID.
 #[derive(Serialize, JsonSchema)]
 pub struct AccessToken {
@@ -46,7 +55,8 @@ pub struct AccessToken {
     pub token_type: &'static str,
     /// Time until token expiration in seconds,
     pub expires_in: u16,
-    pub refresh_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
 }
 
 pub async fn authenticate(
@@ -96,7 +106,7 @@ pub async fn authenticate(
                 .values(models::core::Session {
                     user_id: user.user_id,
                     access_token: access_token.clone().take(),
-                    refresh_token: refresh_token.clone().take(),
+                    refresh_token: Some(refresh_token.clone().take()),
                     started_at: chrono::Utc::now(),
                     valid_until: chrono::Utc::now()
                         .checked_add_signed(chrono::Duration::seconds(30 * 60))
@@ -107,7 +117,7 @@ pub async fn authenticate(
             Ok(Json(AccessToken {
                 token_type: "bearer",
                 access_token: access_token.take(),
-                refresh_token: refresh_token.take(),
+                refresh_token: Some(refresh_token.take()),
                 expires_in: 30 * 60,
             }))
         }
@@ -142,7 +152,7 @@ pub async fn authenticate(
                 Ok(Json(AccessToken {
                     token_type: "bearer",
                     access_token: access_token.take(),
-                    refresh_token: refresh_token.take(),
+                    refresh_token: Some(refresh_token.take()),
                     expires_in: 30 * 60,
                 }))
             } else {
@@ -151,6 +161,54 @@ pub async fn authenticate(
                     .with_msg("the session can no longer be refreshed")
                     .into())
             }
+        }
+        AuthReq::ClientCredentials(credentials) => {
+            let Ok(client): Result<models::core::AuthorisedClientFull,_> = db_schema::authorised_clients::table
+                .filter(
+                    db_schema::authorised_clients::client_id
+                        .eq(credentials.client_id)
+                        .and(
+                            db_schema::authorised_clients::client_secret
+                                .eq(credentials.client_secret),
+                        ),
+                )
+                .first(&mut db_conn)
+                .await else {
+                    return Err(BadRequestError::default().with_docs().with_msg("client_id or client_secret is invalid").into());
+                };
+
+            // generate tokens:
+            let access_token = crate::auth::layer::new_token_with_exp_and_scopes(
+                30 * 60,
+                aliri_oauth2::Scope::default().and(
+                    aliri_oauth2::oauth2::ScopeToken::from_string(format!(
+                        "{}:{}",
+                        crate::auth::scope::UserIdScope::scope_name(),
+                        crate::auth::scope::UserIdScope(client.user_id.clone())
+                    ))
+                    .unwrap(),
+                ),
+            );
+
+            diesel::insert_into(sessions)
+                .values(models::core::Session {
+                    user_id: client.user_id,
+                    access_token: access_token.clone().take(),
+                    refresh_token: None,
+                    started_at: chrono::Utc::now(),
+                    valid_until: chrono::Utc::now()
+                        .checked_add_signed(chrono::Duration::seconds(30 * 60))
+                        .unwrap(),
+                })
+                .execute(&mut db_conn)
+                .await?;
+
+            Ok(Json(AccessToken {
+                token_type: "bearer",
+                access_token: access_token.take(),
+                refresh_token: None,
+                expires_in: 30 * 60,
+            }))
         }
     }
 }

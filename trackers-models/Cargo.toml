@@ -27,3 +27,4 @@ fast_chemail = {version = "^0.9"}
 itertools = "0.10.5"
 bcrypt = "0.14.0"
 random-string = "1.0.0"
+userspace-rng = "^1.0"

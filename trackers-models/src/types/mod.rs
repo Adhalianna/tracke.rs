@@ -3,7 +3,7 @@
 //! Types present in the [types](crate::types) module are shared between models
 //! present in the crate. Besides the type definitions itself conversions and
 //! json schemas for the types are defined within the module's sources as well.
-//! Unlike models the types defined here have usually just one field or they
+//! Unlike models the types defined here have usually just one field and they
 //! use the newtype pattern.
 
 pub mod duration;
@@ -24,3 +24,5 @@ pub mod null_or_true;
 pub use null_or_true::NullOrTrue;
 pub mod list_items;
 pub use list_items::{ListItem, ListItems};
+pub mod client_secret;
+pub use client_secret::ClientSecretStr;

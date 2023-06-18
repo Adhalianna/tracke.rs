@@ -1,5 +1,5 @@
-use axum::response::IntoResponse;
 use super::UserClaims;
+use axum::response::IntoResponse;
 
 const ISSUER: &str = "authority";
 const AUDIENCE: &str = "my_api";
@@ -57,20 +57,16 @@ impl aliri_tower::OnJwtError for AuthErrorHandler {
     fn on_missing_or_malformed(&self) -> axum::http::Response<Self::Body> {
         crate::error::UnathorizedError::default()
             .with_msg("authorization token is missing or malformed")
-            .with_links([
-                ("new session", "/api/session/token".into()),
-                ("documentation", "/doc".into()),
-            ])
+            .with_docs()
+            .with_links([("new session", "/api/session/token".into())])
             .into_response()
     }
 
     fn on_no_matching_jwk(&self) -> axum::http::Response<Self::Body> {
         crate::error::UnathorizedError::default()
             .with_msg("failed to find matching JWK")
-            .with_links([
-                ("new session", "/api/session/token".into()),
-                ("documentation", "/doc".into()),
-            ])
+            .with_docs()
+            .with_links([("new session", "/api/session/token".into())])
             .into_response()
     }
 
@@ -80,10 +76,8 @@ impl aliri_tower::OnJwtError for AuthErrorHandler {
     ) -> axum::http::Response<Self::Body> {
         crate::error::UnathorizedError::default()
             .with_msg(error)
-            .with_links([
-                ("new session", "/api/session/token".into()),
-                ("documentation", "/doc".into()),
-            ])
+            .with_docs()
+            .with_links([("new session", "/api/session/token".into())])
             .into_response()
     }
 }
@@ -94,10 +88,8 @@ impl aliri_tower::OnScopeError for AuthErrorHandler {
     fn on_missing_scope_claim(&self) -> axum::http::Response<Self::Body> {
         crate::error::UnathorizedError::default()
             .with_msg("authorization token is missing scope claims")
-            .with_links([
-                ("new session", "/api/session/token".into()),
-                ("documentation", "/doc".into()),
-            ])
+            .with_docs()
+            .with_links([("new session", "/api/session/token".into())])
             .into_response()
     }
 
@@ -108,10 +100,8 @@ impl aliri_tower::OnScopeError for AuthErrorHandler {
     ) -> axum::http::Response<Self::Body> {
         crate::error::UnathorizedError::default()
             .with_msg(format!("failed to meet required policies with held token"))
-            .with_links([
-                ("new session", "/api/session/token".into()),
-                ("documentation", "/doc".into()),
-            ])
+            .with_links([("new session", "/api/session/token".into())])
+            .with_docs()
             .into_response()
     }
 }

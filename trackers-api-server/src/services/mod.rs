@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+pub mod authorized_client;
 pub mod list;
 pub mod registration;
 pub mod session;
@@ -19,7 +20,8 @@ pub fn app_services() -> axum::Router<crate::AppState> {
             .merge(user::router())
             .merge(registration::router())
             .merge(list::router())
-            .merge(session::router()),
+            .merge(session::router())
+            .merge(authorized_client::router()),
     );
 
     // prep the OAS

@@ -14,6 +14,7 @@ DROP INDEX tasks_task_id_idx;
 DROP INDEX tasks_tracker_id_idx;
 
 
+DROP TABLE authorised_clients;
 DROP TABLE tasks;
 DROP TABLE trackers;
 DROP TABLE registration_requests;
