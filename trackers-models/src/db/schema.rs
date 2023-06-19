@@ -4,6 +4,10 @@ pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "list_item_t"))]
     pub struct ListItemT;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "view_kv_t"))]
+    pub struct ViewKvT;
 }
 
 diesel::table! {
@@ -55,6 +59,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ViewKvT;
+
+    tracker_views (view_id, tracker_id) {
+        view_id -> Uuid,
+        tracker_id -> Uuid,
+        name -> Nullable<Varchar>,
+        keys_values -> Array<Nullable<ViewKvT>>,
+    }
+}
+
+diesel::table! {
     trackers (tracker_id) {
         tracker_id -> Uuid,
         user_id -> Uuid,
@@ -71,16 +87,29 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    views (view_id) {
+        view_id -> Uuid,
+        user_id -> Uuid,
+        name -> Varchar,
+    }
+}
+
 diesel::joinable!(authorised_clients -> users (user_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(tasks -> trackers (tracker_id));
+diesel::joinable!(tracker_views -> trackers (tracker_id));
+diesel::joinable!(tracker_views -> views (view_id));
 diesel::joinable!(trackers -> users (user_id));
+diesel::joinable!(views -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     authorised_clients,
     registration_requests,
     sessions,
     tasks,
+    tracker_views,
     trackers,
     users,
+    views,
 );

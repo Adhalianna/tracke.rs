@@ -44,6 +44,7 @@ pub struct RefreshRequest {
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename = "client_credentials")]
 pub struct ClientCredentialsGrant {
+    /// ID assigned to client by the tracke.rs server
     pub client_id: models::types::ClientSecretStr,
     pub client_secret: models::types::ClientSecretStr,
 }

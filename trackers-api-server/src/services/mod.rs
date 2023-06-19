@@ -7,6 +7,7 @@ pub mod session;
 pub mod task;
 pub mod tracker;
 pub mod user;
+pub mod view;
 
 /// Mounts all the endpoints and deals with the extraction of OpenAPI
 /// specification along with serving the documentation based on the OAS.
@@ -21,7 +22,8 @@ pub fn app_services() -> axum::Router<crate::AppState> {
             .merge(registration::router())
             .merge(list::router())
             .merge(session::router())
-            .merge(authorized_client::router()),
+            .merge(authorized_client::router())
+            .merge(view::router()),
     );
 
     // prep the OAS

@@ -26,3 +26,5 @@ pub mod list_items;
 pub use list_items::{ListItem, ListItems};
 pub mod client_secret;
 pub use client_secret::ClientSecretStr;
+pub mod view_key_value;
+pub use view_key_value::ViewKV;

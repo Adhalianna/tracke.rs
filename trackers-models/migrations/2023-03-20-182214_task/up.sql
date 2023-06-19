@@ -52,7 +52,7 @@ CREATE TABLE tasks(
   soft_deadline timestamp with time zone null,
   hard_deadline timestamp with time zone null,
   tags text[] null,
-  list list_item_t[] null default null check (cardinality(list)>0 AND array_length(list, 1) < 128 AND null != ANY(list))
+  list list_item_t[] null default null check (cardinality(list)>0 AND array_length(list, 1) <= 128 AND null != ANY(list))
 );
 
 CREATE INDEX tasks_task_id_idx ON tasks (task_id); -- B-Tree, uuid7 is sortable and we want to use it to paginate
@@ -65,3 +65,33 @@ CREATE TABLE authorised_clients(
   client_id varchar not null primary key,
   client_secret varchar not null unique
 );
+
+CREATE INDEX authorised_clients_credentials_idx ON authorised_clients (client_id, client_secret);
+CREATE INDEX authorised_clients_user_id_idx ON authorised_clients USING HASH (user_id);
+
+CREATE TABLE views(
+  view_id uuid not null unique,
+  user_id uuid not null references users,
+  name varchar(256) not null,
+  primary key (user_id, name)
+);
+
+CREATE TYPE view_kv_t AS (
+  key varchar(64),
+  value varchar(64)
+);
+
+CREATE INDEX views_view_id_idx ON views USING HASH(view_id);
+CREATE INDEX views_name_user_id_idx ON views (user_id, name);
+CREATE INDEX views_user_id_idx ON views USING HASH (user_id);
+
+CREATE TABLE tracker_views(
+  view_id uuid not null references views (view_id),
+  tracker_id uuid not null references trackers (tracker_id),
+  name varchar(256) null,
+  keys_values view_kv_t[] not null default array[]::view_kv_t[] check (cardinality(keys_values)>=0 AND array_length(keys_values, 1) <= 128 AND null != ANY(keys_values)),
+  primary key (view_id, tracker_id)
+);
+
+CREATE INDEX tracker_views_view_id_idx ON tracker_views USING HASH (view_id);
+CREATE INDEX tracker_views_tracker_id_idx ON tracker_views USING HASH (tracker_id);

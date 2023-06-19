@@ -18,3 +18,5 @@ pub mod session;
 pub use session::*;
 pub mod client_credentials;
 pub use client_credentials::*;
+pub mod view;
+pub use view::*;

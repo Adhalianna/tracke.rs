@@ -14,3 +14,11 @@ INSERT INTO tasks VALUES
 ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', null, 'Vacuum clean the bedroom', null, 8*60 + 40, null, null, ARRAY ['chore'], null),
 ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', null, 'Review test material', null, 8*60*60, null, null, ARRAY ['chore'], ARRAY[ ('encryption algorithms',false), ('protecting applications',false), ('sql injections', true)]::list_item_t[] )
 ;
+
+INSERT INTO views VALUES
+('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'my view')
+;
+
+INSERT INTO tracker_views VALUES 
+('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', null, ARRAY[('tag[0]', 'assignments')]::view_kv_t[])
+;

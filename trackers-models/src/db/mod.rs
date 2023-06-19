@@ -13,3 +13,5 @@ pub mod user;
 pub use user::*;
 pub mod registration_req;
 pub use registration_req::*;
+pub mod view;
+pub use view::*;
