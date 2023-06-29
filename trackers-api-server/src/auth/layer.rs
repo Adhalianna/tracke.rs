@@ -1,10 +1,12 @@
+use std::{str::FromStr, sync::OnceLock};
+
 use super::UserClaims;
 use axum::response::IntoResponse;
 
-const ISSUER: &str = "authority";
-const AUDIENCE: &str = "my_api";
-const KEY_ID: &str = "test key";
-const SHARED_SECRET: &[u8] = b"test";
+const ISSUER: OnceLock<String> = OnceLock::new();
+const AUDIENCE: OnceLock<String> = OnceLock::new();
+const KEY_ID: OnceLock<String> = OnceLock::new();
+const SHARED_SECRET: OnceLock<String> = OnceLock::new();
 
 pub async fn require_jwt<B: axum::body::HttpBody>(
     request: axum::http::Request<B>,
@@ -28,8 +30,30 @@ pub fn validator() -> &'static aliri::jwt::CoreValidator {
     VALID.get_or_init(|| {
         aliri::jwt::CoreValidator::default()
             .add_approved_algorithm(aliri::jwa::Algorithm::HS256)
-            .add_allowed_audience(aliri::jwt::Audience::from_static(AUDIENCE))
-            .require_issuer(aliri::jwt::Issuer::from_static(ISSUER))
+            .add_allowed_audience(
+                aliri::jwt::Audience::from_str(AUDIENCE.get_or_init(|| {
+                    #[cfg(feature = "local-dev")]
+                    let audience = dotenvy::var("JWT_AUDIENCE")
+                        .expect("JWT_AUDIENCE environment variable must be set in the .env file");
+                    #[cfg(not(feature = "local-dev"))]
+                    let audience = std::env::var("JWT_AUDIENCE")
+                        .expect("JWT_AUDIENCE environment variable must be set");
+                    audience
+                }))
+                .unwrap(),
+            )
+            .require_issuer(
+                aliri::jwt::Issuer::from_str(ISSUER.get_or_init(|| {
+                    #[cfg(feature = "local-dev")]
+                    let issuer = dotenvy::var("JWT_ISSUER")
+                        .expect("JWT_ISSUER environment variable must be set in the .env file");
+                    #[cfg(not(feature = "local-dev"))]
+                    let issuer = std::env::var("JWT_ISSUER")
+                        .expect("JWT_ISSUER environment variable must be set");
+                    issuer
+                }))
+                .unwrap(),
+            )
     })
 }
 
@@ -37,9 +61,34 @@ pub fn authority() -> &'static aliri_oauth2::Authority {
     static AUTH: once_cell::sync::OnceCell<aliri_oauth2::Authority> =
         once_cell::sync::OnceCell::new();
     AUTH.get_or_init(|| {
-        let key = aliri::Jwk::from(aliri::jwa::Hmac::new(SHARED_SECRET))
-            .with_algorithm(aliri::jwa::Algorithm::HS256)
-            .with_key_id(aliri::jwk::KeyId::from_static(KEY_ID));
+        let key = aliri::Jwk::from(aliri::jwa::Hmac::new(
+            SHARED_SECRET
+                .get_or_init(|| {
+                    #[cfg(feature = "local-dev")]
+                    let secret = dotenvy::var("JWT_SHARED_SECRET").expect(
+                        "JWT_SHARED_SECRET environment variable must be set in the .env file",
+                    );
+                    #[cfg(not(feature = "local-dev"))]
+                    let secret = std::env::var("JWT_SHARED_SECRET")
+                        .expect("JWT_SHARED_SECRET environment variable must be set");
+                    secret
+                })
+                .to_owned()
+                .into_bytes(),
+        ))
+        .with_algorithm(aliri::jwa::Algorithm::HS256)
+        .with_key_id(
+            aliri::jwk::KeyId::from_str(KEY_ID.get_or_init(|| {
+                #[cfg(feature = "local-dev")]
+                let key = dotenvy::var("JWT_KEY_ID")
+                    .expect("JWT_KEY_ID environment variable must be set in the .env file");
+                #[cfg(not(feature = "local-dev"))]
+                let key = std::env::var("JWT_KEY_ID")
+                    .expect("JWT_KEY_ID environment variable must be set");
+                key
+            }))
+            .unwrap(),
+        );
 
         let mut jwks = aliri::Jwks::default();
         jwks.add_key(key);
@@ -118,19 +167,77 @@ pub fn new_token_with_exp_and_scopes(
 ) -> aliri::Jwt {
     let jwt_headers = aliri::jwt::BasicHeaders::with_key_id(
         aliri::jwa::Algorithm::HS256,
-        aliri::jwk::KeyId::from_static(KEY_ID),
+        aliri::jwk::KeyId::from_str(KEY_ID.get_or_init(|| {
+            #[cfg(feature = "local-dev")]
+            let key = dotenvy::var("JWT_KEY_ID")
+                .expect("JWT_KEY_ID environment variable must be set in the .env file");
+            #[cfg(not(feature = "local-dev"))]
+            let key =
+                std::env::var("JWT_KEY_ID").expect("JWT_KEY_ID environment variable must be set");
+            key
+        }))
+        .unwrap(),
     );
-    let jwk = aliri::Jwk::from(aliri::jwa::Hmac::new(SHARED_SECRET))
-        .with_algorithm(aliri::jwa::Algorithm::HS256)
-        .with_key_id(aliri::jwk::KeyId::from_static(KEY_ID));
+    let jwk = aliri::Jwk::from(aliri::jwa::Hmac::new(
+        SHARED_SECRET
+            .get_or_init(|| {
+                #[cfg(feature = "local-dev")]
+                let secret = dotenvy::var("JWT_SHARED_SECRET")
+                    .expect("JWT_SHARED_SECRET environment variable must be set in the .env file");
+                #[cfg(not(feature = "local-dev"))]
+                let secret = std::env::var("JWT_SHARED_SECRET")
+                    .expect("JWT_SHARED_SECRET environment variable must be set");
+                secret
+            })
+            .to_owned()
+            .into_bytes(),
+    ))
+    .with_algorithm(aliri::jwa::Algorithm::HS256)
+    .with_key_id(
+        aliri::jwk::KeyId::from_str(KEY_ID.get_or_init(|| {
+            #[cfg(feature = "local-dev")]
+            let key = dotenvy::var("JWT_KEY_ID")
+                .expect("JWT_KEY_ID environment variable must be set in the .env file");
+            #[cfg(not(feature = "local-dev"))]
+            let key =
+                std::env::var("JWT_KEY_ID").expect("JWT_KEY_ID environment variable must be set");
+            key
+        }))
+        .unwrap(),
+    );
     let claims = UserClaims {
         exp: aliri_clock::UnixTime::from({
             std::time::SystemTime::now()
                 .checked_add(std::time::Duration::from_secs(lifetime_in_seconds))
                 .unwrap()
         }),
-        iss: aliri::jwt::Issuer::new(ISSUER.to_owned()),
-        aud: aliri::jwt::Audience::new(AUDIENCE.to_owned()).into(),
+        iss: aliri::jwt::Issuer::new(
+            ISSUER
+                .get_or_init(|| {
+                    #[cfg(feature = "local-dev")]
+                    let issuer = dotenvy::var("JWT_ISSUER")
+                        .expect("JWT_ISSUER environment variable must be set in the .env file");
+                    #[cfg(not(feature = "local-dev"))]
+                    let issuer = std::env::var("JWT_ISSUER")
+                        .expect("JWT_ISSUER environment variable must be set");
+                    issuer
+                })
+                .to_owned(),
+        ),
+        aud: aliri::jwt::Audience::new(
+            AUDIENCE
+                .get_or_init(|| {
+                    #[cfg(feature = "local-dev")]
+                    let audience = dotenvy::var("JWT_AUDIENCE")
+                        .expect("JWT_AUDIENCE environment variable must be set in the .env file");
+                    #[cfg(not(feature = "local-dev"))]
+                    let audience = std::env::var("JWT_AUDIENCE")
+                        .expect("JWT_AUDIENCE environment variable must be set");
+                    audience
+                })
+                .to_owned(),
+        )
+        .into(),
         jti: uuid::Uuid::now_v7(),
         scope: scopes,
     };
