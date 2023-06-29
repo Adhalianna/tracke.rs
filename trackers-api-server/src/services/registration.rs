@@ -7,12 +7,17 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/registration-request/:email",
-            routing::get(get_request),
+            routing::get_with(get_request, |op| {
+                op.summary("Fetch details of issued registration request")
+            }),
             |op| op.tag("Registration"),
         )
         .api_route_with(
             "/registration-request/:email/code",
-            routing::post(confirm_request),
+            routing::post_with(confirm_request, |op| {
+                op.summary("Confirm request with code")
+                    .description("The code should have been sent to the selected email address.")
+            }),
             |op| op.tag("Registration"),
         )
 }

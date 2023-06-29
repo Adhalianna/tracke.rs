@@ -88,7 +88,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    views (view_id) {
+    views (user_id, name) {
         view_id -> Uuid,
         user_id -> Uuid,
         name -> Varchar,
@@ -99,7 +99,6 @@ diesel::joinable!(authorised_clients -> users (user_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(tasks -> trackers (tracker_id));
 diesel::joinable!(tracker_views -> trackers (tracker_id));
-diesel::joinable!(tracker_views -> views (view_id));
 diesel::joinable!(trackers -> users (user_id));
 diesel::joinable!(views -> users (user_id));
 

@@ -10,30 +10,47 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/task/:task_id/list",
-            routing::get(get_just_list)
-                .post(add_list)
-                .put(replace_list)
-                .delete(delete_list),
+            routing::get_with(get_just_list, |op| op.summary("Fetch associated list"))
+                .post_with(add_list, |op| op.summary("Add a list to the task"))
+                .put_with(replace_list, |op| op.summary("Replace the stored list"))
+                .delete_with(delete_list, |op| op.summary("Delete a list from the task")),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/task/:task_id/list/item/:idx",
-            routing::get(get_list_item)
-                .delete(delete_list_item)
-                .put(replace_list_item)
-                .post(create_list_item_with_idx),
+            routing::get_with(get_list_item, |op| {
+                op.summary("Fetch details of specific list item")
+            })
+            .delete_with(delete_list_item, |op| {
+                op.summary("Delete an item from the list")
+            })
+            .put_with(replace_list_item, |op| {
+                op.summary("Replace an item in the list")
+            })
+            .post_with(create_list_item_with_idx, |op| {
+                op.summary("Try to create an item with specified index")
+            }),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/task/:task_id/list/item/:idx/checkmark",
-            routing::delete(remove_item_checkmark)
-                .put(mark_item_done)
-                .post(mark_item_done),
+            routing::delete_with(remove_item_checkmark, |op| {
+                op.summary("Unmark selected item as done")
+            })
+            .put_with(mark_item_done, |op| {
+                op.summary("Mark an item in the list done")
+            })
+            .post_with(mark_item_done, |op| {
+                op.summary("Mark an item in the list done")
+            }),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/task/:task_id/list/items",
-            routing::post(create_list_item),
+            routing::post_with(create_list_item, |op| {
+                op.summary("Add a new item to the list")
+                    .description("This will also create a new list if none was stored previously.")
+            }),
             |op| op.tag("Task Management"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
@@ -82,7 +99,7 @@ async fn modify_item_checkmark(
         .await?;
 
     Ok(ModifiedResource {
-        location: None,
+        location: Some(format!("/api/task/{task_id}/list")),
         resource: Resource::new(list.0.remove(item_idx - 1)),
     })
 }
@@ -127,13 +144,13 @@ async fn create_list_item(
     };
 
     diesel::update(db_schema::tasks::table)
-        .filter(db_schema::tasks::task_id.eq(task_id))
+        .filter(db_schema::tasks::task_id.eq(&task_id))
         .set(db_schema::tasks::list.eq(&list))
         .execute(&mut db_conn)
         .await?;
 
     Ok(ModifiedResource {
-        location: None,
+        location: Some(format!("/api/task/{task_id}/list")),
         resource: Resource::new(list),
     })
 }
@@ -173,20 +190,20 @@ async fn create_list_item_with_idx(
                     "replace",
                     format!("/api/task/{task_id}/list/item/{item_idx}"),
                 ),
-                ("full list", format!("/api/task/{task_id}/list")),
+                ("list", format!("/api/task/{task_id}/list")),
             ])
             .into());
     } else {
         list_inner.push(new_item);
 
         diesel::update(db_schema::tasks::table)
-            .filter(db_schema::tasks::task_id.eq(task_id))
+            .filter(db_schema::tasks::task_id.eq(&task_id))
             .set(db_schema::tasks::list.eq(&list))
             .execute(&mut db_conn)
             .await?;
 
         Ok(ModifiedResource {
-            location: None,
+            location: Some(format!("/api/task/{task_id}/list")),
             resource: Resource::new(list),
         })
     }
@@ -236,13 +253,13 @@ async fn replace_list_item(
     }
 
     diesel::update(db_schema::tasks::table)
-        .filter(db_schema::tasks::task_id.eq(task_id))
+        .filter(db_schema::tasks::task_id.eq(&task_id))
         .set(db_schema::tasks::list.eq(&list))
         .execute(&mut db_conn)
         .await?;
 
     Ok(ModifiedResource {
-        location: None,
+        location: Some(format!("/api/task/{task_id}/list")),
         resource: Resource::new(list),
     })
 }

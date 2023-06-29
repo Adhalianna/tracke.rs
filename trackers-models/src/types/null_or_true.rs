@@ -16,7 +16,7 @@
     Default,
 )]
 #[serde(from = "Option<bool>")]
-#[serde(into = "Option<bool>")]
+#[serde(into = "bool")]
 #[cfg_attr(
     feature = "diesel",
     derive(diesel::deserialize::FromSqlRow, diesel::expression::AsExpression)
@@ -80,6 +80,24 @@ impl From<bool> for NullOrTrue {
     }
 }
 
+impl<'a> Into<&'a bool> for &'a NullOrTrue {
+    fn into(self) -> &'a bool {
+        match self {
+            NullOrTrue::Null => &false,
+            NullOrTrue::True => &true,
+        }
+    }
+}
+
+impl Into<bool> for NullOrTrue {
+    fn into(self) -> bool {
+        match self {
+            NullOrTrue::Null => false,
+            NullOrTrue::True => true,
+        }
+    }
+}
+
 #[cfg(feature = "diesel")]
 impl diesel::serialize::ToSql<diesel::sql_types::Nullable<diesel::sql_types::Bool>, diesel::pg::Pg>
     for NullOrTrue
@@ -92,6 +110,16 @@ impl diesel::serialize::ToSql<diesel::sql_types::Nullable<diesel::sql_types::Boo
             diesel::sql_types::Nullable<diesel::sql_types::Bool>,
             _,
         >>::to_sql(self.into(), out)
+    }
+}
+
+#[cfg(feature = "diesel")]
+impl diesel::serialize::ToSql<diesel::sql_types::Bool, diesel::pg::Pg> for NullOrTrue {
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, diesel::pg::Pg>,
+    ) -> diesel::serialize::Result {
+        <bool as diesel::serialize::ToSql<diesel::sql_types::Bool, _>>::to_sql(self.into(), out)
     }
 }
 
@@ -110,5 +138,41 @@ impl
             _,
         >>::from_sql(bytes)?;
         Ok(NullOrTrue::from(opt))
+    }
+    fn from_nullable_sql(
+        bytes: Option<diesel::backend::RawValue<'_, diesel::pg::Pg>>,
+    ) -> diesel::deserialize::Result<Self> {
+        if let Some(bytes) = bytes {
+            let opt = <Option<bool> as diesel::deserialize::FromSql<
+                diesel::sql_types::Nullable<diesel::sql_types::Bool>,
+                _,
+            >>::from_sql(bytes)?;
+            Ok(NullOrTrue::from(opt))
+        } else {
+            Ok(NullOrTrue::from(None))
+        }
+    }
+}
+
+#[cfg(feature = "diesel")]
+impl diesel::deserialize::FromSql<diesel::sql_types::Bool, diesel::pg::Pg> for NullOrTrue {
+    fn from_sql(
+        bytes: diesel::backend::RawValue<'_, diesel::pg::Pg>,
+    ) -> diesel::deserialize::Result<Self> {
+        let opt =
+            <bool as diesel::deserialize::FromSql<diesel::sql_types::Bool, _>>::from_sql(bytes)?;
+        Ok(NullOrTrue::from(opt))
+    }
+    fn from_nullable_sql(
+        bytes: Option<diesel::backend::RawValue<'_, diesel::pg::Pg>>,
+    ) -> diesel::deserialize::Result<Self> {
+        if let Some(bytes) = bytes {
+            let opt = <bool as diesel::deserialize::FromSql<diesel::sql_types::Bool, _>>::from_sql(
+                bytes,
+            )?;
+            Ok(NullOrTrue::from(opt))
+        } else {
+            Ok(NullOrTrue::from(None))
+        }
     }
 }

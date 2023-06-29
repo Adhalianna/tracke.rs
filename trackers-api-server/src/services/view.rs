@@ -36,29 +36,31 @@ async fn get_all_views(
 
     use diesel::JoinOnDsl;
 
-    let views: Vec<(models::db::View, models::db::TrackerView, String)> = db_schema::views::table
-        .inner_join(db_schema::users::table)
-        .filter(
-            db_schema::users::email
-                .eq(email)
-                .and(db_schema::users::user_id.eq(user_id.0)),
-        )
-        .inner_join(db_schema::tracker_views::table)
-        .inner_join(
-            db_schema::trackers::table
-                .on(db_schema::trackers::tracker_id.eq(db_schema::tracker_views::tracker_id)),
-        )
-        .select((
-            db_schema::views::all_columns,
-            db_schema::tracker_views::all_columns,
-            db_schema::trackers::name,
-        ))
-        .get_results(&mut db_conn)
-        .await?;
+    todo!()
 
-    let views: Vec<models::core::View> = TmpViewVec::from(views).into();
+    // let views: Vec<(models::db::View, models::db::TrackerView, String)> = db_schema::views::table
+    //     .inner_join(db_schema::users::table)
+    //     .filter(
+    //         db_schema::users::email
+    //             .eq(email)
+    //             .and(db_schema::users::user_id.eq(user_id.0)),
+    //     )
+    //     .inner_join(db_schema::tracker_views::table)
+    //     .inner_join(
+    //         db_schema::trackers::table
+    //             .on(db_schema::trackers::tracker_id.eq(db_schema::tracker_views::tracker_id)),
+    //     )
+    //     .select((
+    //         db_schema::views::all_columns,
+    //         db_schema::tracker_views::all_columns,
+    //         db_schema::trackers::name,
+    //     ))
+    //     .get_results(&mut db_conn)
+    //     .await?;
 
-    Ok(Resource::new(views).with_links([("documentation", "doc".into()), ("create", format!(""))]))
+    // let views: Vec<models::core::View> = TmpViewVec::from(views).into();
+
+    // Ok(Resource::new(views).with_links([("documentation", "doc".into()), ("create", format!(""))]))
 }
 
 async fn create_view(

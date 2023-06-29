@@ -6,12 +6,25 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/user/:email/authorised_clients",
-            routing::get(get_authorised_clients).post(authorize_new_client),
+            routing::get_with(get_authorised_clients, |op| {
+                op.summary("Fetch all authorised clients")
+            })
+            .post_with(authorize_new_client, |op| {
+                op.summary("Authorise a new client")
+            }),
             |op| op.tag("Authorizing Client Applications"),
+        )
+        .route(
+            "/user/:email/authorised_client/:client_id",
+            routing::get(use_post_instead),
         )
         .api_route_with(
             "/user/:email/authorised_client/:client_id",
-            routing::post(get_full_athorised_client).delete(remove_authorisation),
+            routing::post_with(get_full_athorised_client, |op| {
+                op.summary("Fetch authorised client details")
+                    .description("Note that issueing this request with GET method will result in an error. This is because we do not want to have that request to be stored in cache of any browser software.")
+            })
+            .delete_with(remove_authorisation, |op| op.summary("Unauthorise application")),
             |op| op.tag("Authorizing Client Applications"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
@@ -50,6 +63,21 @@ async fn authorize_new_client(
         ),
         resource: Resource::new(authorised_client),
     })
+}
+
+async fn use_post_instead(
+    axum::extract::Path((email, client_id)): axum::extract::Path<(EmailAddress, String)>,
+) -> ApiError {
+    BadRequestError::default()
+        .with_msg(
+            "POST request should be used to avoid accidentially saving sensitive details in cache",
+        )
+        .with_docs()
+        .with_links([(
+            "authorised client details",
+            format!("/api/user/{email}/authorised_client/{client_id}"),
+        )])
+        .into()
 }
 
 async fn get_full_athorised_client(

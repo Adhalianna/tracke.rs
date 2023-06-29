@@ -8,17 +8,40 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/task/:task_id",
-            routing::get(get_one_task).patch(patch_task),
+            routing::get_with(get_one_task, |op| op.summary("Fetch the task"))
+                .patch_with(patch_task, |op| op.summary("Update the task")),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/task/:task_id/checkmark",
-            routing::post(make_completed)
-                .put(make_completed)
-                .delete(make_uncompleted),
+            routing::post_with(make_completed, |op| op.summary("Mark the task done"))
+                .put_with(make_completed, |op| op.summary("Mark the task done"))
+                .delete_with(make_uncompleted, |op| op.summary("Unmark the task as done")),
             |op| op.tag("Task Management"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
+}
+
+// Attach appropiate links to the task resource
+fn task_links(task: &models::db::Task) -> Vec<(&'static str, String)> {
+    let mut links = Vec::new();
+    if task.completed_at.is_some() {
+        links.push(("unmark", format!("/api/task/{}/checkmark", task.task_id)));
+    } else {
+        links.push(("checkmark", format!("/api/task/{}/checkmark", task.task_id)))
+    }
+    if task.list.is_some() {
+        links.extend([
+            ("replace list", format!("/api/task/{}/list", task.task_id)),
+            ("delete list", format!("/api/task/{}/list", task.task_id)),
+        ])
+    } else {
+        links.push(("attach list", format!("/api/task/{}/list", task.task_id)))
+    }
+    links.push(("tracker", format!("/api/tracker/{}", task.tracker_id)));
+    links.push(("self", format!("/api/task/{}", task.task_id)));
+
+    links
 }
 
 async fn get_one_task(
@@ -32,7 +55,7 @@ async fn get_one_task(
     let mut db_conn = state.db.get().await?;
     use db_schema::tasks::dsl::tasks;
 
-    let (the_task, task_user_id) = tasks
+    let (the_task, task_user_id): (models::db::Task, models::types::Uuid) = tasks
         .inner_join(db_schema::trackers::table)
         .filter(db_schema::tasks::task_id.eq(task_id.clone()))
         // .filter(db_schema::trackers::user_id.eq(user_id.0))
@@ -44,23 +67,8 @@ async fn get_one_task(
         Err(ForbiddenError::default().with_msg("no access to the selected task"))?;
     }
 
+    let links = task_links(&the_task);
     let resource: Resource<Task> = Resource::new(the_task.into());
-
-    // add appropiate links
-    let mut links = Vec::new();
-    if resource.data.checkmarked {
-        links.push(("unmark", format!("/api/task/{task_id}/checkmark")));
-    } else {
-        links.push(("checkmark", format!("/api/task/{task_id}/checkmark")))
-    }
-    if resource.data.list.is_some() {
-        links.extend([
-            ("replace list", format!("/api/task/{task_id}/list")),
-            ("delete list", format!("/api/task/{task_id}/list")),
-        ])
-    } else {
-        links.push(("attach list", format!("/api/task/{task_id}/list")))
-    }
 
     Ok(resource.with_links(links))
 }
@@ -105,9 +113,11 @@ async fn patch_task(
         .get_result(&mut db_conn)
         .await?;
 
+    let links = task_links(&updated);
+
     Ok(ModifiedResource {
         location: None,
-        resource: Resource::new(updated.into()),
+        resource: Resource::new(updated.into()).with_links(links),
     })
 }
 
@@ -139,12 +149,11 @@ async fn make_completed(
         .get_result(&mut db_conn)
         .await?;
 
+    let links = task_links(&updated_task);
+
     Ok(ModifiedResource {
         location: Some(format!("/api/task/{task_id}")),
-        resource: Resource::new(updated_task.into()).with_links([
-            ("unmark", format!("/api/task/{task_id}/checkmark")),
-            ("self", format!("/api/task/{task_id}")),
-        ]),
+        resource: Resource::new(updated_task.into()).with_links(links),
     })
 }
 
@@ -176,11 +185,10 @@ async fn make_uncompleted(
         .get_result(&mut db_conn)
         .await?;
 
+    let links = task_links(&updated_task);
+
     Ok(ModifiedResource {
         location: Some(format!("/api/task/{task_id}")),
-        resource: Resource::new(updated_task.into()).with_links([
-            ("checkmark", format!("/api/task/{task_id}/checkmark")),
-            ("self", format!("/api/task/{task_id}")),
-        ]),
+        resource: Resource::new(updated_task.into()).with_links(links),
     })
 }

@@ -151,7 +151,11 @@ pub struct DeletedResource {
 
 impl axum::response::IntoResponse for DeletedResource {
     fn into_response(self) -> axum::response::Response {
-        (axum::http::StatusCode::OK, axum::Json(self)).into_response()
+        if self.links.is_empty() {
+            (axum::http::StatusCode::OK).into_response()
+        } else {
+            (axum::http::StatusCode::OK, axum::Json(self)).into_response()
+        }
     }
 }
 

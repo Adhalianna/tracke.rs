@@ -8,9 +8,11 @@ pub fn router() -> ApiRouter<AppState> {
                 axum::response::Redirect::permanent("/api/session/token")
             }),
         )
-        .api_route_with("/session/token", routing::post(authenticate), |op| {
-            op.tag("Log-in")
-        })
+        .api_route_with(
+            "/session/token",
+            routing::post_with(authenticate, |op| op.summary("Start new session")),
+            |op| op.tag("Log-in"),
+        )
 }
 
 /// OAuth2 authentication request. The server supports only resource owner flow

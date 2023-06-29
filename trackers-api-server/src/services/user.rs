@@ -5,27 +5,37 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/user/:email/trackers",
-            routing::get(get_users_trackers)
-                .post(post_to_users_trackers)
-                .layer(
-                    crate::auth::layer::authorizer()
-                        .jwt_layer(crate::auth::layer::authority().clone()),
-                ),
+            routing::get_with(get_users_trackers, |op| {
+                op.summary("Fetch all trackers of a user")
+            })
+            .post_with(post_to_users_trackers, |op| {
+                op.summary("Create a new tracker")
+            })
+            .layer(
+                crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()),
+            ),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/user/:email/tasks",
-            routing::get(get_all_user_tasks)
-                .post(add_to_the_default_or_selected_tracker)
-                .layer(
-                    crate::auth::layer::authorizer()
-                        .jwt_layer(crate::auth::layer::authority().clone()),
-                ),
+            routing::get_with(get_all_user_tasks, |op| {
+                op.summary("Fetch all tasks of a user")
+            })
+            .post_with(add_to_the_default_or_selected_tracker, |op| {
+                op.summary("Create a task in user's default tracker")
+            })
+            .layer(
+                crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()),
+            ),
             |op| op.tag("Task Management"),
         )
-        .api_route_with("/users", routing::post(start_user_registaration), |op| {
-            op.tag("Registration")
-        })
+        .api_route_with(
+            "/users",
+            routing::post_with(start_user_registaration, |op| {
+                op.summary("Start user registration process")
+            }),
+            |op| op.tag("Registration"),
+        )
 }
 
 async fn send_registration_code_mail(
@@ -186,9 +196,9 @@ async fn get_users_trackers(
         .inner_join(db_schema::users::table)
         .select(db_schema::trackers::all_columns)
         .filter(
-            db_schema::trackers::user_id
-                .eq(user_id.0)
-                .and(db_schema::users::email.eq(email)),
+            db_schema::users::user_id
+                .eq(&user_id.0)
+                .and(db_schema::users::email.eq(&email)),
         )
         .get_results(&mut db_conn)
         .await?;
@@ -197,7 +207,17 @@ async fn get_users_trackers(
         Err(NotFoundError::default().with_msg("failed to find any accessible trackers"))?;
     }
 
-    Ok(Resource::new(user_trackers))
+    let default_tracker_id = &user_trackers
+        .iter()
+        .find(|t| t.is_default.into())
+        .unwrap()
+        .tracker_id
+        .clone();
+
+    Ok(Resource::new(user_trackers).with_links([(
+        "default tracker",
+        format!("/api/tracker/{default_tracker_id}"),
+    )]))
 }
 
 async fn post_to_users_trackers(
@@ -244,9 +264,11 @@ async fn post_to_users_trackers(
         .get_result(&mut db_conn)
         .await?;
 
+    let links = [("self", format!("/api/tracker/{}", &inserted.tracker_id))];
+
     Ok(CreatedResource {
         location: format!("/api/tracker/{}", &inserted.tracker_id),
-        resource: Resource::new(inserted),
+        resource: Resource::new(inserted).with_links(links),
     })
 }
 

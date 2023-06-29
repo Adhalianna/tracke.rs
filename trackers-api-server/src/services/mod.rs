@@ -22,8 +22,7 @@ pub fn app_services() -> axum::Router<crate::AppState> {
             .merge(registration::router())
             .merge(list::router())
             .merge(session::router())
-            .merge(authorized_client::router())
-            .merge(view::router()),
+            .merge(authorized_client::router()), // .merge(view::router()),
     );
 
     // prep the OAS

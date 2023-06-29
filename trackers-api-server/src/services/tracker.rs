@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::prelude::*;
 use models::{db, Task, TaskInput, Tracker, TrackerPatch, TrackerReplace};
 
@@ -5,15 +7,24 @@ pub fn router() -> ApiRouter<AppState> {
     ApiRouter::new()
         .api_route_with(
             "/tracker/:tracker_id",
-            routing::get(get_one_tracker)
-                .put(replace_tracker)
-                .delete(delete_tracker)
-                .patch(patch_tracker),
+            routing::get_with(get_one_tracker, |op| op.summary("Fetch a single tracker"))
+                .put_with(replace_tracker, |op| {
+                    op.summary("Replace the tracker")
+                })
+                .delete_with(delete_tracker, |op| {
+                    op.summary("Deleta a tracker with all tasks stored within").description("The deletion will be unsuccessful if the tracker is marked as default tracker. Instead of deleting the default tracker it is recommended to rename it or replace its data completely.")
+                })
+                .patch_with(patch_tracker, |op| op.summary("Partially update a tracker")),
             |op| op.tag("Task Management"),
         )
         .api_route_with(
             "/tracker/:tracker_id/tasks",
-            routing::get(get_trackers_tasks).post(post_to_tracker_a_task),
+            routing::get_with(get_trackers_tasks, |op| {
+                op.summary("Fetch all tasks belonging to a specific tracker")
+            })
+            .post_with(post_to_tracker_a_task, |op| {
+                op.summary("Create a task and add it to the specified tracker")
+            }),
             |op| op.tag("Task Management"),
         )
         .layer(crate::auth::layer::authorizer().jwt_layer(crate::auth::layer::authority().clone()))
@@ -40,8 +51,10 @@ async fn get_one_tracker(
         Err(ForbiddenError::default().with_msg("no access to the selected task tracker"))?;
     }
 
-    Ok(Resource::new(the_tracker)
-        .with_links([("tasks", format!("/api/tracker/{tracker_id}/tasks"))]))
+    Ok(Resource::new(the_tracker).with_links([
+        ("tasks", format!("/api/tracker/{tracker_id}/tasks")),
+        ("self", format!("/api/tracker/{tracker_id}")),
+    ]))
 }
 
 async fn patch_tracker(
@@ -58,7 +71,7 @@ async fn patch_tracker(
 
     if let Some(json_tracker_id) = &input.tracker_id {
         if tracker_id != *json_tracker_id {
-            Err(ConflictError::default().with_msg(
+            Err(ConflictError::default().with_docs().with_msg(
                 "tracker id provided in path parameters and body fields are mismatching",
             ))?;
         }
@@ -93,7 +106,7 @@ async fn patch_tracker(
         location: None,
         resource: Resource::new(tracker).with_links([
             ("tasks", format!("/api/tracker/{tracker_id}/tasks")),
-            ("documentation", format!("/doc")),
+            ("self", format!("/api/tracker/{tracker_id}")),
         ]),
     })
 }
@@ -112,6 +125,7 @@ async fn replace_tracker(
 
     if tracker_id != input.tracker_id {
         Err(ConflictError::default()
+            .with_docs()
             .with_msg("tracker id provided in path parameters and body fields are mismatching"))?;
     }
 
@@ -144,7 +158,7 @@ async fn replace_tracker(
         location: None,
         resource: Resource::new(tracker).with_links([
             ("tasks", format!("/api/tracker/{tracker_id}/tasks")),
-            ("documentation", format!("/doc")),
+            ("self", format!("/api/tracker/{tracker_id}")),
         ]),
     })
 }
@@ -162,30 +176,33 @@ async fn delete_tracker(
 
     // TODO: use a transaction here
 
-    let to_delete_search_res: diesel::result::QueryResult<Tracker> = trackers
-        .filter(
-            columns::tracker_id
-                .eq(&tracker_id)
-                .and(columns::user_id.eq(&user_id.0))
-                .and(columns::is_default.eq(models::types::NullOrTrue::Null)),
-        )
-        .first(&mut db_conn)
-        .await;
+    let to_delete_search_res: diesel::result::QueryResult<(Tracker, models::types::Email)> =
+        trackers
+            .inner_join(db_schema::users::table)
+            .filter(
+                columns::tracker_id
+                    .eq(&tracker_id)
+                    .and(columns::user_id.eq(&user_id.0))
+                    .and(columns::is_default.is_null()),
+            )
+            .select((db_schema::trackers::all_columns, db_schema::users::email))
+            .first(&mut db_conn)
+            .await;
 
-    let to_delete: Tracker = match to_delete_search_res {
-        Ok(tracker) => tracker,
+    let (to_delete, user_email) = match to_delete_search_res {
+        Ok(res) => res,
         Err(err) => match err {
             diesel::result::Error::NotFound => {
-                let exist_not_default = trackers
+                let exists_but_default = trackers
                     .filter(
                         columns::tracker_id
                             .eq(&tracker_id)
-                            .and(columns::user_id.eq(&user_id.0)),
+                            .and(columns::is_default.eq(true)),
                     )
                     .execute(&mut db_conn)
                     .await?;
-                if exist_not_default > 1 {
-                    return Err(ForbiddenError::default().with_docs().with_msg("the specified task tracker is considered the default task tracker for the user and as such it cannot be removed").into());
+                if exists_but_default == 1 {
+                    return Err(ForbiddenError::default().with_docs().with_links([("update tracker", format!("/api/tracker/{tracker_id}"))]).with_msg("the specified task tracker is considered the default task tracker for the user and as such it cannot be removed").into());
                 } else {
                     return Err(err.into());
                 }
@@ -212,7 +229,13 @@ async fn delete_tracker(
     }
 
     Ok(DeletedResource {
-        ..Default::default()
+        links: HashMap::from([
+            (
+                "create new tracker",
+                format!("/api/user/{user_email}/trackers"),
+            ),
+            ("user trackers", format!("/api/user/{user_email}/trackers")),
+        ]),
     })
 }
 
